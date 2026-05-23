@@ -19,6 +19,7 @@
     "server:fake": "CORRESPONDENCE_FAKE_DEMO=1 CORRESPONDENCE_DEV=1 npx tsx src/index.ts",
     "sync:twilio-webhook": "npx tsx scripts/sync-twilio-webhook.ts",
     "dev:correspondence": "bash scripts/dev-correspondence.sh",
+    "dev:correspondence:ui": "bash scripts/dev-correspondence-ui.sh",
     "init:clickhouse": "npx tsx scripts/init_clickhouse.ts",
     "web:dev": "cd web && npm run dev",
     "web:build": "cd web && npm run build",

@@ -47,15 +47,12 @@ export async function twilioWebhookUrlForRequest(headers, path = "/api/webhooks/
   return service.twilioWebhookUrlFromRequest(configMod.loadConfig(), headers, path);
 }
 
-export async function correspondenceDevEnabled() {
-  const service = await loadService();
-  return service.correspondenceDevEnabled();
-}
-
 export {
   buildListingSummary,
   canStartCorrespondence,
+  correspondenceDevEnabled,
   correspondenceFakeDemoEnabled,
   demoListerPhone,
   twilioConfiguredForCorrespondence,
+  useDemoListerPhoneFallback,
 } from "./correspondenceClient.js";

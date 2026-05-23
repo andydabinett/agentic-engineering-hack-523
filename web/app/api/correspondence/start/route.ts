@@ -23,6 +23,7 @@ export async function POST(request: Request) {
       canStartCorrespondence,
       correspondenceFakeDemoEnabled,
       demoListerPhone,
+      useDemoListerPhoneFallback,
     } = await loadCorrespondenceBridge();
 
     if (!canStartCorrespondence()) {
@@ -47,7 +48,7 @@ export async function POST(request: Request) {
     const listerPhone =
       body.listerPhone ||
       listing.brokerPhone ||
-      (correspondenceFakeDemoEnabled() ? demoListerPhone() : "");
+      (useDemoListerPhoneFallback() ? demoListerPhone() : "");
 
     if (!listerPhone?.trim()) {
       return NextResponse.json(

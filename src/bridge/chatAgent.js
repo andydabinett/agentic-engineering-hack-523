@@ -21,6 +21,7 @@ import {
   correspondenceFakeDemoEnabled,
   demoListerPhone,
   startCorrespondence,
+  useDemoListerPhoneFallback,
 } from "./correspondenceService.js";
 
 const AGENT_DIR = path.join(ROOT, "agent");
@@ -163,7 +164,7 @@ const startCorrespondenceTool = defineTool({
     const phone =
       params.listerPhone ||
       listing.brokerPhone ||
-      (correspondenceFakeDemoEnabled() ? demoListerPhone() : "");
+      (useDemoListerPhoneFallback() ? demoListerPhone() : "");
     if (!phone?.trim()) {
       return {
         content: [

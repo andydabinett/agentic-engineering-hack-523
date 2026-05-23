@@ -2,13 +2,30 @@ import twilio from "twilio";
 
 import type { Config } from "../../config.ts";
 
-export function twilioSmsWebhookUrl(publicBaseUrl: string): string {
-  return `${publicBaseUrl.replace(/\/$/, "")}/webhooks/twilio/sms`;
+/** Hono correspondence server (legacy dev:correspondence on :3001). */
+export const HONO_TWILIO_WEBHOOK_PATH = "/webhooks/twilio/sms";
+
+/** Next.js public webhook (dashboard + in-process orchestrator). */
+export const NEXT_TWILIO_WEBHOOK_PATH = "/api/webhooks/twilio/sms";
+
+export function resolveTwilioWebhookPath(): string {
+  const fromEnv = process.env.TWILIO_WEBHOOK_PATH?.trim();
+  if (fromEnv) return fromEnv.startsWith("/") ? fromEnv : `/${fromEnv}`;
+  return HONO_TWILIO_WEBHOOK_PATH;
+}
+
+export function twilioSmsWebhookUrl(
+  publicBaseUrl: string,
+  webhookPath: string = resolveTwilioWebhookPath(),
+): string {
+  const path = webhookPath.startsWith("/") ? webhookPath : `/${webhookPath}`;
+  return `${publicBaseUrl.replace(/\/$/, "")}${path}`;
 }
 
 export async function syncTwilioSmsWebhook(
   config: Config,
   publicBaseUrl: string,
+  options?: { webhookPath?: string },
 ): Promise<{ webhookUrl: string; phoneNumberSid: string }> {
   if (!config.twilioAccountSid || !config.twilioAuthToken || !config.twilioPhoneNumber) {
     throw new Error(
@@ -17,7 +34,7 @@ export async function syncTwilioSmsWebhook(
   }
 
   const client = twilio(config.twilioAccountSid, config.twilioAuthToken);
-  const webhookUrl = twilioSmsWebhookUrl(publicBaseUrl);
+  const webhookUrl = twilioSmsWebhookUrl(publicBaseUrl, options?.webhookPath);
 
   const phoneNumberSid =
     process.env.TWILIO_PHONE_NUMBER_SID ??

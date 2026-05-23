@@ -28,9 +28,27 @@ cp .env.example .env
 
 ---
 
-## Quick start (recommended)
+## Quick start — dashboard + Virtual Phone (recommended for demo)
 
-**Terminal 1** — server, ngrok, and Twilio webhook sync in one command:
+One command: Next dashboard, ngrok on `:3000`, Twilio webhook → in-process orchestrator.
+
+```bash
+# .env: TWILIO_* set, CORRESPONDENCE_FAKE_DEMO=0, DEMO_LISTER_PHONE=+18777804236
+npm run dev:correspondence:ui
+```
+
+1. Open http://localhost:3000
+2. Click **Reach out** on a **matched** listing (uses `DEMO_LISTER_PHONE` when the listing has no broker phone)
+3. Reply on the [Twilio Virtual Phone](https://console.twilio.com/us1/develop/phone-numbers/manage/incoming) — e.g. *"Saturday afternoon works"*
+4. Watch **Messages** and **Viewings** update; thread ends at `completed`
+
+After ngrok restarts: `npm run sync:twilio-webhook -- --next`
+
+---
+
+## Quick start — CLI + Hono (backend / scripts)
+
+**Terminal 1** — Hono server, ngrok, and Twilio webhook sync on `:3001`:
 
 ```bash
 npm run dev:correspondence
