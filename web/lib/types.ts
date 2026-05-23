@@ -73,6 +73,16 @@ export interface Viewing {
   endTime: Date;
 }
 
+export interface BookingNotification {
+  id: string;
+  viewingId: string;
+  address: string;
+  brokerName: string;
+  startTime: Date;
+  timestamp: Date;
+  read: boolean;
+}
+
 export interface PersonalEvent {
   id: string;
   title: string;

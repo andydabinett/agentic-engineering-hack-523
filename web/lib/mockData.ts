@@ -5,6 +5,7 @@ import type {
   Message,
   PersonalEvent,
   Viewing,
+  BookingNotification,
 } from "./types";
 
 /**
@@ -557,3 +558,24 @@ export const demoBroker = {
   phone: "(917) 555-0188",
   listingId: "listing-demo",
 };
+
+export const notifications: BookingNotification[] = [
+  {
+    id: "notif-1",
+    viewingId: "viewing-2",
+    address: "511 E 7th St #2C",
+    brokerName: "Priya Aggarwal",
+    startTime: nextWeekday(4, 17, 30),
+    timestamp: minutesAgo(18),
+    read: false,
+  },
+  {
+    id: "notif-2",
+    viewingId: "viewing-1",
+    address: "234 E 10th St #4B",
+    brokerName: "Jamie Carter",
+    startTime: nextWeekday(2, 18, 0),
+    timestamp: hoursAgo(2),
+    read: true,
+  },
+];

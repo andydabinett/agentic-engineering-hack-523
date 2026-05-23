@@ -7,6 +7,7 @@ import {
   initialStatusCounts,
   personalEvents as seedPersonalEvents,
   viewings as seedViewings,
+  notifications as seedNotifications,
 } from "./mockData";
 import {
   dedupeWebListings,
@@ -22,6 +23,7 @@ import type {
   PersonalEvent,
   SearchCriteria,
   Viewing,
+  BookingNotification,
 } from "./types";
 
 const blankCriteria: SearchCriteria = {
@@ -68,6 +70,9 @@ interface AppState {
   viewings: Viewing[];
   personalEvents: PersonalEvent[];
   addViewing: (v: Viewing) => void;
+  notifications: BookingNotification[];
+  markNotificationAsRead: (id: string) => void;
+  clearAllNotifications: () => void;
 
   // dashboard counts (animated tick targets)
   statusCounts: typeof initialStatusCounts;
@@ -205,12 +210,33 @@ export const useAppStore = create<AppState>((set) => ({
   // -- viewings + calendar --
   viewings: seedViewings,
   personalEvents: seedPersonalEvents,
+  notifications: seedNotifications,
   addViewing: (v) =>
-    set((state) =>
-      state.viewings.some((existing) => existing.id === v.id)
-        ? state
-        : { viewings: [...state.viewings, v] },
-    ),
+    set((state) => {
+      if (state.viewings.some((existing) => existing.id === v.id)) {
+        return state;
+      }
+      const newNotif: BookingNotification = {
+        id: `notif-${v.id}-${Date.now()}`,
+        viewingId: v.id,
+        address: v.address,
+        brokerName: v.brokerName,
+        startTime: v.startTime,
+        timestamp: new Date(),
+        read: false,
+      };
+      return {
+        viewings: [...state.viewings, v],
+        notifications: [newNotif, ...state.notifications],
+      };
+    }),
+  markNotificationAsRead: (id) =>
+    set((state) => ({
+      notifications: state.notifications.map((n) =>
+        n.id === id ? { ...n, read: true } : n
+      ),
+    })),
+  clearAllNotifications: () => set({ notifications: [] }),
 
   // -- status counts --
   statusCounts: { ...initialStatusCounts },
