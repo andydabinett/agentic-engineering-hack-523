@@ -37,6 +37,8 @@ Correspondence (parallel):
 | `npm run web:dev` | Next.js UI at http://localhost:3000 |
 | `npm run dev` | Pi coding agent TUI (`agent/`) |
 | `npm run server` | Correspondence Hono server (`src/index.ts`, default port 3001) |
+| `npm run dev:correspondence` | Server + ngrok + auto Twilio webhook sync (sets `CORRESPONDENCE_DEV=1`) |
+| `npm run sync:twilio-webhook` | Point Twilio SMS webhook at current ngrok URL (or `--url`) |
 | `npm test` | Correspondence unit tests (vitest) |
 | `npm run demo:correspondence -- +1…` | Start demo thread (Twilio Virtual Phone: `+18777804236`) |
 | `npm run init:clickhouse` | Create correspondence tables (optional; in-memory fallback if unset) |
@@ -63,13 +65,17 @@ Required for ingest: `NIMBLE_API_KEY`
 Required for analytics sync: `CLICKHOUSE_HOST` + `CLICKHOUSE_API_KEY` (the API key is the DB password)  
 Required for live chat: `OPENROUTER_API_KEY`  
 Required for SMS correspondence: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER`  
-Required for inbound SMS (local dev): `PUBLIC_BASE_URL` (ngrok HTTPS URL) + Twilio number webhook → `{PUBLIC_BASE_URL}/webhooks/twilio/sms`
+Optional dev: `CORRESPONDENCE_DEV=1` enables `POST /correspondence/:id/simulate-reply` (no ngrok needed). See **[DEMO.md](DEMO.md)**.
+
+`PUBLIC_BASE_URL` stays `http://localhost:3001` for local API calls. When ngrok restarts, run `npm run sync:twilio-webhook` (or use `npm run dev:correspondence`). Twilio webhook signature validation uses ngrok `X-Forwarded-Host` headers — you do **not** need to edit `.env` on every ngrok spinup.
 
 The web app loads the **repo root** `.env` (not only `web/.env`).
 
 ## Correspondence API (Hono — `npm run server`)
 
 Separate from the Next.js app. Default base URL: `http://localhost:3001` (auto-increments if port busy).
+
+**Step-by-step demo:** see **[DEMO.md](DEMO.md)** (quick start, ngrok/Twilio sync, simulate-reply, troubleshooting).
 
 | Route | Purpose |
 |-------|---------|
@@ -78,12 +84,22 @@ Separate from the Next.js app. Default base URL: `http://localhost:3001` (auto-i
 | `GET /correspondence/:threadId` | Status, messages, `proposedViewingAt`, `calendarEventId` |
 | `GET /correspondence?listingId=&userId=` | List threads |
 | `POST /correspondence/:threadId/retry` | Retry failed thread |
-| `POST /webhooks/twilio/sms` | Twilio inbound SMS (configure on your Twilio number) |
-| `GET /auth/google` | Google Calendar OAuth (optional demo) |
+| `POST /correspondence/:threadId/simulate-reply` | Dev only (`CORRESPONDENCE_DEV=1`): inject lister SMS without Twilio |
+| `POST /webhooks/twilio/sms` | Twilio inbound SMS |
+| `GET /auth/google` | Google Calendar OAuth (optional) |
 
 **Status values** (poll every ~2s while active): `initiated` → `outreach_sent` → `awaiting_lister_reply` → `negotiating_time` → `viewing_proposed` → `viewing_confirmed` → `calendar_event_created` → `completed` (or `failed`).
 
-**Local demo:** `ngrok http 3001` → set `PUBLIC_BASE_URL` → point Twilio Messaging webhook at `/webhooks/twilio/sms` → `npm run demo:correspondence -- +18777804236` (Twilio Virtual Phone).
+### Local dev tooling
+
+| Command | Purpose |
+|---------|---------|
+| `npm run dev:correspondence` | Server + ngrok + `sync:twilio-webhook` + `CORRESPONDENCE_DEV=1` |
+| `npm run sync:twilio-webhook` | Patch Twilio SMS webhook to current ngrok URL |
+| `npm run sync:twilio-webhook -- --url https://…` | Patch webhook to a stable deploy URL |
+| `npm run demo:correspondence -- +1…` | Start a demo thread and poll status |
+
+**ngrok / `PUBLIC_BASE_URL`:** keep `PUBLIC_BASE_URL=http://localhost:3001` in `.env`. When ngrok restarts, run `sync:twilio-webhook` — signatures use ngrok forwarded headers, so `.env` does not need the ngrok hostname. See [DEMO.md — ngrok URL rotation](DEMO.md#ngrok-url-rotation).
 
 Without `OPENROUTER_API_KEY`, a scripted agent handles the happy path. With it, pi-agent tools (`send_sms`, `check_calendar`, `book_viewing`) drive replies.
 

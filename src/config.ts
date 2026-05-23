@@ -1,6 +1,7 @@
 export interface Config {
   port: number;
   publicBaseUrl: string;
+  correspondenceDev: boolean;
   openRouterApiKey: string | undefined;
   twilioAccountSid: string | undefined;
   twilioAuthToken: string | undefined;
@@ -23,8 +24,9 @@ function env(name: string, fallback?: string): string | undefined {
 
 export function loadConfig(): Config {
   return {
-    port: Number(env("PORT", "3000")),
-    publicBaseUrl: env("PUBLIC_BASE_URL", "http://localhost:3000")!,
+    port: Number(env("PORT", "3001")),
+    publicBaseUrl: env("PUBLIC_BASE_URL", "http://localhost:3001")!,
+    correspondenceDev: env("CORRESPONDENCE_DEV", "0") === "1",
     openRouterApiKey: env("OPENROUTER_API_KEY"),
     twilioAccountSid: env("TWILIO_ACCOUNT_SID"),
     twilioAuthToken: env("TWILIO_AUTH_TOKEN"),

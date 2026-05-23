@@ -22,7 +22,7 @@ export function createTwilioWebhookRoutes(deps: AppDeps) {
 
     if (deps.config.twilioAuthToken && !valid) {
       console.warn(
-        `[twilio webhook] Invalid signature for URL ${url} (check PUBLIC_BASE_URL matches ngrok)`,
+        `[twilio webhook] Invalid signature for URL ${url} (run npm run sync:twilio-webhook after ngrok restarts)`,
       );
       return c.text("Invalid Twilio signature", 403);
     }

@@ -3,15 +3,21 @@
  * Demo script for live correspondence with a verified Twilio trial phone.
  *
  * Usage:
- *   cp .env.example .env   # fill TWILIO_* and optional CLICKHOUSE_*
- *   npm run server         # in one terminal
- *   ngrok http 3000        # set PUBLIC_BASE_URL in .env to ngrok URL
- *   npm run demo:correspondence -- +15551234567
+ *   npm run dev:correspondence
+ *   npm run demo:correspondence -- +18777804236
+ *
+ * Without ngrok, simulate lister replies:
+ *   curl -X POST http://localhost:3001/correspondence/<threadId>/simulate-reply \
+ *     -H 'Content-Type: application/json' -d '{"body":"Saturday works"}'
+ *   (requires CORRESPONDENCE_DEV=1)
  */
 
 import "../src/env.ts";
 
-const baseUrl = process.env.PUBLIC_BASE_URL ?? "http://localhost:3000";
+const port = process.env.PORT ?? "3001";
+const baseUrl = process.env.PUBLIC_BASE_URL?.includes("localhost")
+  ? `http://localhost:${port}`
+  : (process.env.PUBLIC_BASE_URL ?? `http://localhost:${port}`);
 const listerPhone = process.argv[2];
 
 if (!listerPhone) {

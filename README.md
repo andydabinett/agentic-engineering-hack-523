@@ -1,5 +1,5 @@
 # Javier — the NYC Rent Concierge
 
-Integration map: **[INTEGRATION.md](INTEGRATION.md)** · Deploy: **[DEPLOY.md](DEPLOY.md)**
+**Demo:** **[DEMO.md](DEMO.md)** · Integration: **[INTEGRATION.md](INTEGRATION.md)** · Deploy: **[DEPLOY.md](DEPLOY.md)**
 
-**Correspondence (SMS agent):** `npm run server` → see [Correspondence API](INTEGRATION.md#correspondence-api-hono--npm-run-server) in INTEGRATION.md.
+Quick correspondence demo: `npm run dev:correspondence` then `npm run demo:correspondence -- +18777804236`

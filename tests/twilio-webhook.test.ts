@@ -136,4 +136,64 @@ describe("Correspondence HTTP routes", () => {
     expect(json.status).toBe("awaiting_lister_reply");
     expect(json.messages.length).toBeGreaterThan(0);
   });
+
+  it("POST /correspondence/:id/simulate-reply works when CORRESPONDENCE_DEV=1", async () => {
+    const store = new FakeClickHouse();
+    const sms = new FakeSmsProvider();
+    const calendar = new FakeCalendarProvider();
+    const orchestrator = new CorrespondenceOrchestrator(
+      store,
+      sms,
+      calendar,
+      new ScriptedCorrespondenceAgent(),
+    );
+    const app = createServer({
+      config: { ...loadConfig(), correspondenceDev: true },
+      store,
+      sms,
+      calendar,
+      orchestrator,
+    });
+
+    const start = await app.request("http://localhost/correspondence/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        listingId: "abc",
+        listerPhone: "+15551234567",
+        userId: "user-1",
+      }),
+    });
+    const started = await start.json();
+    expect(started.status).toBe("awaiting_lister_reply");
+
+    const reply = await app.request(
+      `http://localhost/correspondence/${started.threadId}/simulate-reply`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ body: "Saturday afternoon works for me" }),
+      },
+    );
+
+    expect(reply.status).toBe(200);
+    const view = await reply.json();
+    expect(view.messages.some((m: { direction: string }) => m.direction === "inbound")).toBe(
+      true,
+    );
+  });
+
+  it("POST /correspondence/:id/simulate-reply is hidden without CORRESPONDENCE_DEV", async () => {
+    const app = createServer({
+      config: { ...loadConfig(), correspondenceDev: false },
+    });
+
+    const response = await app.request("http://localhost/correspondence/thread-1/simulate-reply", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body: "Hello" }),
+    });
+
+    expect(response.status).toBe(404);
+  });
 });

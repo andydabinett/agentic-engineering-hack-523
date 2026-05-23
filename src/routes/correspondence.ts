@@ -81,5 +81,29 @@ export function createCorrespondenceRoutes(deps: AppDeps) {
     }
   });
 
+  app.post("/:threadId/simulate-reply", async (c) => {
+    if (!deps.config.correspondenceDev) {
+      return c.json({ error: "Dev routes disabled. Set CORRESPONDENCE_DEV=1." }, 404);
+    }
+
+    const body = await c.req.json<{ body?: string }>();
+    if (!body.body?.trim()) {
+      return c.json({ error: "body is required" }, 400);
+    }
+
+    try {
+      const view = await deps.orchestrator.simulateInboundReply(
+        c.req.param("threadId"),
+        body.body.trim(),
+      );
+      return c.json(serializeThreadView(view));
+    } catch (error) {
+      return c.json(
+        { error: error instanceof Error ? error.message : "Simulate reply failed" },
+        400,
+      );
+    }
+  });
+
   return app;
 }

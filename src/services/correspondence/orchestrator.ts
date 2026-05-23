@@ -38,6 +38,23 @@ export class CorrespondenceOrchestrator {
     return this.getThreadView(thread.threadId);
   }
 
+  async simulateInboundReply(threadId: string, body: string): Promise<ThreadView> {
+    const thread = await this.store.getThread(threadId);
+    if (!thread) {
+      throw new Error(`Thread not found: ${threadId}`);
+    }
+
+    const view = await this.handleInboundSms(
+      thread.listerPhone,
+      body,
+      `sim-${crypto.randomUUID()}`,
+    );
+    if (!view) {
+      throw new Error("Thread is not active");
+    }
+    return view;
+  }
+
   async handleInboundSms(from: string, body: string, twilioSid?: string): Promise<ThreadView | null> {
     const thread = await this.store.findActiveThreadByPhone(normalizePhone(from));
     if (!thread) {
