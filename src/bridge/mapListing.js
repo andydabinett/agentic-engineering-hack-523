@@ -45,6 +45,20 @@ function photosForId(id) {
   return Array.from({ length: 4 }, (_, i) => PLACEHOLDER_PHOTOS[(n + i) % PLACEHOLDER_PHOTOS.length]);
 }
 
+function photosFromRow(row) {
+  if (row.photos_json) {
+    try {
+      const parsed = JSON.parse(row.photos_json);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.filter((u) => typeof u === 'string' && u.startsWith('http'));
+      }
+    } catch {
+      /* ignore bad JSON */
+    }
+  }
+  return photosForId(row.id);
+}
+
 function matchScoreFromRow(row) {
   const rent = parseRent(row.rent_hint);
   if (!rent) return 72;
@@ -64,7 +78,7 @@ export function mapRowToWebListing(row) {
     beds: parseBeds(row.bedrooms),
     baths: parseBaths(row.bathrooms),
     sqftApprox: 650,
-    photos: photosForId(row.id),
+    photos: photosFromRow(row),
     brokerName: row.agent_name && !row.agent_name.endsWith(':') ? row.agent_name : 'Contact',
     brokerPhone: row.agent_phone || '',
     listedAt: row.first_seen_at || row.last_seen_at || new Date().toISOString(),

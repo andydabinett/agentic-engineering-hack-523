@@ -9,9 +9,13 @@ interface ListingGalleryProps {
   alt: string;
 }
 
+const FALLBACK =
+  "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1600&q=80";
+
 export function ListingGallery({ photos, alt }: ListingGalleryProps) {
   const [active, setActive] = useState(0);
-  const current = photos[active] ?? photos[0];
+  const gallery = photos.length > 0 ? photos : [FALLBACK];
+  const current = gallery[active] ?? gallery[0];
 
   return (
     <div className="flex flex-col gap-2.5">
@@ -28,7 +32,7 @@ export function ListingGallery({ photos, alt }: ListingGalleryProps) {
         />
       </div>
       <ul className="grid grid-cols-5 gap-2">
-        {photos.slice(0, 5).map((p, i) => (
+        {gallery.slice(0, 5).map((p, i) => (
           <li key={`${p}-${i}`}>
             <button
               type="button"

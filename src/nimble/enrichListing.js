@@ -1,6 +1,7 @@
 import { NimbleClient } from './client.js';
 import { extractCraigslistListing, isPostingUnavailable } from './craigslistExtract.js';
 import { parseContacts } from './contactParser.js';
+import { parseListingPhotos } from './imageParser.js';
 import { parseRentHints } from './parsers.js';
 import {
   extractCraigslistListingUrls,
@@ -111,9 +112,16 @@ export async function enrichListingDetail(
   let contacts = parseContacts(text, source, { listingUrl: item.url });
   let contactVia = 'nimble';
 
+  const hints = parseRentHints(`${item.title} ${item.snippet} ${text}`);
+  let photos = parseListingPhotos(text, source);
+  if (item.photos?.length) {
+    photos = [...new Set([...item.photos, ...photos])].slice(0, 12);
+  }
+
   const shouldRunPlaywright =
     usePlaywrightFallback &&
-    needsPlaywrightFallback(contacts, source, { requireCraigslistPhone });
+    (needsPlaywrightFallback(contacts, source, { requireCraigslistPhone }) ||
+      (photos.length === 0 && source === 'craigslist'));
 
   if (shouldRunPlaywright) {
     try {
@@ -127,12 +135,13 @@ export async function enrichListingDetail(
           contactVia = 'playwright';
         }
       }
+      if (pw.photos?.length) {
+        photos = [...new Set([...photos, ...pw.photos])].slice(0, 12);
+      }
     } catch {
-      // Playwright optional; keep Nimble-only contacts
+      // Playwright optional; keep Nimble-only contacts/photos
     }
   }
-
-  const hints = parseRentHints(`${item.title} ${item.snippet} ${text}`);
 
   return {
     listingLink: item.url,
@@ -148,6 +157,7 @@ export async function enrichListingDetail(
     rentHint: hints.rentHint ?? item.rentHint,
     bedrooms: hints.bedrooms ?? item.bedrooms,
     bathrooms: hints.bathrooms ?? item.bathrooms,
+    photos,
     rawExtract: response,
   };
 }
@@ -168,6 +178,7 @@ function unavailableResult(item, source, response) {
     rentHint: item.rentHint,
     bedrooms: item.bedrooms,
     bathrooms: item.bathrooms,
+    photos: [],
     rawExtract: response,
   };
 }

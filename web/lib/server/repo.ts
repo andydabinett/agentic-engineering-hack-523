@@ -26,3 +26,7 @@ export function loadClickHouseAnalytics() {
 export function loadChatAgent() {
   return repoImport("src/bridge/chatAgent.js");
 }
+
+export function loadAgentScrape() {
+  return repoImport("src/crawler/agentScrape.js");
+}

@@ -1,4 +1,5 @@
 import { NimbleClient } from '../nimble/client.js';
+import { isPostingUnavailable } from '../nimble/craigslistExtract.js';
 
 const DEAD_PHRASES = {
   craigslist: [
@@ -50,6 +51,10 @@ export function classifyListing(source, response, { httpStatus } = {}) {
   const text = extractText(response);
   if (!text.trim()) {
     return { result: 'unknown', note: 'empty extract body' };
+  }
+
+  if (source === 'craigslist' && isPostingUnavailable(text)) {
+    return { result: 'expired', note: 'craigslist unavailable (deleted, held, or removed)' };
   }
 
   for (const phrase of DEAD_PHRASES[source]) {

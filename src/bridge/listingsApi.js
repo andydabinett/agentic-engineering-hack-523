@@ -1,5 +1,6 @@
 import { ListingRepository } from '../listings/repository.js';
 import { BOROUGHS } from '../listings/boroughs.js';
+import { listListingsFromClickHouse, sqliteDbExists } from '../clickhouse/listingsRead.js';
 import { mapRowToWebListing, mapRowsToWebListings } from './mapListing.js';
 import { buildPipelineStats } from './pipelineStats.js';
 
@@ -10,6 +11,14 @@ export function openRepository(dbPath) {
 export function listListings(repo, { borough, source, limit = 200 } = {}) {
   const rows = repo.listAll({ borough, source, limit });
   return mapRowsToWebListings(rows);
+}
+
+/** SQLite when present; otherwise ClickHouse (for Vercel / fresh cloud deploy). */
+export async function listListingsAuto(repo, opts = {}) {
+  if (sqliteDbExists() && repo) {
+    return listListings(repo, opts);
+  }
+  return listListingsFromClickHouse(opts);
 }
 
 export function getListingById(repo, webId) {

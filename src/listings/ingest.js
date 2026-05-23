@@ -22,6 +22,7 @@ function toRecord(enriched) {
     agencyName: enriched.agencyName,
     agentEmail: enriched.agentEmail,
     agentPhone: enriched.agentPhone,
+    photos: enriched.photos ?? [],
   };
 }
 
@@ -35,6 +36,7 @@ export async function ingestBoroughSource(
     enrich = true,
     requireCraigslistPhone = true,
     usePlaywrightFallback = true,
+    neighborhood,
     client,
   } = {},
 ) {
@@ -48,6 +50,7 @@ export async function ingestBoroughSource(
   const { listings, response } = await searchRentals(borough, source, {
     maxResults,
     searchDepth,
+    neighborhood,
     client: nimble,
   });
 
@@ -63,7 +66,15 @@ export async function ingestBoroughSource(
   let skipped = 0;
   let noPhone = 0;
 
-  const toProcess = candidates.slice(0, maxResults);
+  const hoodNeedle = neighborhood?.trim().toLowerCase();
+  const matchesNeighborhood = (text) => {
+    if (!hoodNeedle) return true;
+    return String(text || '').toLowerCase().includes(hoodNeedle);
+  };
+
+  const toProcess = candidates
+    .filter((item) => matchesNeighborhood(`${item.title} ${item.snippet}`))
+    .slice(0, maxResults);
 
   for (const item of toProcess) {
     if (!item.url) {
@@ -114,6 +125,7 @@ export async function ingestBoroughSource(
         rentHint: item.rentHint,
         bedrooms: item.bedrooms,
         bathrooms: item.bathrooms,
+        photos: [],
       };
       if (source === 'craigslist' && requireCraigslistPhone) {
         noPhone += 1;
@@ -154,6 +166,7 @@ export async function ingestAll(
     enrich = true,
     requireCraigslistPhone = true,
     usePlaywrightFallback = true,
+    neighborhood,
     client,
   } = {},
 ) {
@@ -171,6 +184,7 @@ export async function ingestAll(
             enrich,
             requireCraigslistPhone,
             usePlaywrightFallback,
+            neighborhood,
             client: nimble,
           }),
         );

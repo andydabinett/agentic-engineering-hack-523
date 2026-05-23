@@ -1,0 +1,24 @@
+# https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: javier-nyc-rent
+    runtime: docker
+    plan: starter
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CLOUD_INGEST
+        value: "1"
+      - key: NIMBLE_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: CLICKHOUSE_HOST
+        sync: false
+      - key: CLICKHOUSE_API_KEY
+        sync: false
+    disk:
+      name: listings-data
+      mountPath: /app/data
+      sizeGB: 1

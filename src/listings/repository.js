@@ -49,6 +49,7 @@ const CONTACT_COLUMNS = [
   ['agency_name', 'TEXT'],
   ['agent_email', 'TEXT'],
   ['agent_phone', 'TEXT'],
+  ['photos_json', 'TEXT'],
 ];
 
 function migrateSchema(db) {
@@ -79,6 +80,8 @@ export class ListingRepository {
     const now = utcNow();
     const rawJson = rawSearch ? JSON.stringify(rawSearch) : null;
     const listingLink = record.listingLink || record.url;
+    const photosJson =
+      record.photos?.length > 0 ? JSON.stringify(record.photos) : null;
 
     this.db
       .prepare(
@@ -86,12 +89,12 @@ export class ListingRepository {
       INSERT INTO listings (
         source, borough, url, listing_link, title, snippet,
         rent_hint, bedrooms, bathrooms,
-        agent_name, agency_name, agent_email, agent_phone,
+        agent_name, agency_name, agent_email, agent_phone, photos_json,
         status, first_seen_at, last_seen_at, verification_note, raw_search_json
       ) VALUES (
         ?, ?, ?, ?, ?, ?,
         ?, ?, ?,
-        ?, ?, ?, ?,
+        ?, ?, ?, ?, ?,
         ?, ?, ?, ?, ?
       )
       ON CONFLICT(url) DO UPDATE SET
@@ -105,6 +108,11 @@ export class ListingRepository {
         agency_name = COALESCE(excluded.agency_name, listings.agency_name),
         agent_email = COALESCE(excluded.agent_email, listings.agent_email),
         agent_phone = COALESCE(excluded.agent_phone, listings.agent_phone),
+        photos_json = CASE
+          WHEN excluded.photos_json IS NOT NULL AND excluded.photos_json != '[]'
+          THEN excluded.photos_json
+          ELSE listings.photos_json
+        END,
         last_seen_at = excluded.last_seen_at,
         raw_search_json = COALESCE(excluded.raw_search_json, listings.raw_search_json)
     `,
@@ -123,6 +131,7 @@ export class ListingRepository {
         record.agencyName ?? null,
         record.agentEmail ?? null,
         record.agentPhone ?? null,
+        photosJson,
         record.status || 'active',
         now,
         now,

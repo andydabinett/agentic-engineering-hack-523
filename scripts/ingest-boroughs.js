@@ -4,16 +4,17 @@ import { ingestAll } from '../src/listings/ingest.js';
 import { ListingRepository } from '../src/listings/repository.js';
 import { buildRentalQuery } from '../src/nimble/realEstateSearch.js';
 import { NimbleAPIError, NimbleClient } from '../src/nimble/client.js';
-import { parseArgs } from '../src/cli/parseArgs.js';
+import { flagList, parseArgs } from '../src/cli/parseArgs.js';
 import { DEFAULT_DB } from '../src/config/env.js';
 
 async function main() {
   const args = parseArgs();
   const boroughs = args.boroughs ? String(args.boroughs).split(/\s+/) : ['all'];
   const sources = args.sources
-    ? String(args.sources).split(/\s+/)
+    ? flagList(String(args.sources).replace(/\s+/g, ','))
     : ['craigslist', 'streeteasy'];
   const maxResults = Number(args['max-results'] || 5);
+  const neighborhood = args.neighborhood ? String(args.neighborhood) : undefined;
   const depth = args.depth || 'deep';
   const enrich = !args['no-enrich'];
   const requireCraigslistPhone = !args['allow-no-phone'];
@@ -27,7 +28,7 @@ async function main() {
         payload.push({
           borough: borough.id,
           source,
-          query: buildRentalQuery(borough, source),
+          query: buildRentalQuery(borough, source, neighborhood),
           enrich,
           usePlaywrightFallback,
           requireCraigslistPhone: source === 'craigslist' ? requireCraigslistPhone : false,
@@ -47,9 +48,10 @@ async function main() {
 
   const repo = new ListingRepository(dbPath);
   try {
+    const hoodLabel = neighborhood ? ` neighborhood="${neighborhood}"` : '';
     console.log(
-      `Ingesting ${sources.join(', ')} for boroughs ${boroughs.join(', ')} ` +
-        `(depth=${depth}, enrich=${enrich}, playwright=${usePlaywrightFallback}, requireCraigslistPhone=${requireCraigslistPhone})...`,
+      `Ingesting ${sources.join(', ')} for boroughs ${boroughs.join(', ')}${hoodLabel} ` +
+        `(depth=${depth}, max=${maxResults}/source, enrich=${enrich}, playwright=${usePlaywrightFallback}, requireCraigslistPhone=${requireCraigslistPhone})...`,
     );
     const summaries = await ingestAll(repo, {
       boroughs,
@@ -59,6 +61,7 @@ async function main() {
       enrich,
       requireCraigslistPhone,
       usePlaywrightFallback,
+      neighborhood,
     });
     for (const s of summaries) {
       console.log(

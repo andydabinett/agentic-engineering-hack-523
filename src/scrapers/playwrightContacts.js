@@ -4,6 +4,7 @@
  */
 
 import { parseContacts } from '../nimble/contactParser.js';
+import { parseListingPhotos } from '../nimble/imageParser.js';
 import { isPostingUnavailable } from '../nimble/craigslistExtract.js';
 
 let browserPromise = null;
@@ -118,7 +119,8 @@ export async function extractContactsWithPlaywright(url, source) {
     const blob = [html, innerText, telLinks.join('\n')].join('\n');
 
     const contacts = parseContacts(blob, source, { listingUrl: url });
-    return { unavailable: false, contacts, clicked: true };
+    const photos = parseListingPhotos(blob, source);
+    return { unavailable: false, contacts, photos, clicked: true };
   } finally {
     await page.close();
   }

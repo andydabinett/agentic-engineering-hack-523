@@ -13,6 +13,7 @@
     "dev:agent": "./dev.sh",
     "web:dev": "cd web && npm run dev",
     "web:build": "cd web && npm run build",
+    "start:web": "cd web && npm run start",
     "dev:stack": "npm run web:dev",
     "clickhouse:migrate": "node scripts/clickhouse-migrate.js",
     "sync:clickhouse": "node scripts/sync-clickhouse.js",
@@ -20,10 +21,14 @@
     "test:zillow": "node scripts/test-zillow-scrape.js",
     "ingest": "node scripts/ingest-boroughs.js",
     "ingest:brooklyn": "node scripts/ingest-boroughs.js --boroughs brooklyn --max-results 3 --depth deep",
+    "ingest:east-village": "node scripts/ingest-east-village.js",
     "contacts": "node scripts/list-contacts.js",
     "test:craigslist-phone": "node scripts/test-craigslist-phone.js",
     "playwright:install": "playwright install chromium",
-    "verify": "node scripts/verify-listings.js"
+    "verify": "node scripts/verify-listings.js",
+    "crawler": "node scripts/crawl-daemon.js",
+    "crawler:once": "node scripts/crawl-daemon.js --once",
+    "start:prod": "bash scripts/start-production.sh"
   },
   "dependencies": {
     "@clickhouse/client": "^1.10.1",

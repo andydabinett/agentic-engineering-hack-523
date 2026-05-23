@@ -10,13 +10,16 @@ export async function GET(request: Request) {
   const limit = Number(searchParams.get("limit") || 200);
 
   try {
-    const { openRepository, listListings } = await loadListingsApi();
-    const repo = openRepository();
+    const { openRepository, listListingsAuto, sqliteDbExists } = await loadListingsApi();
+    const repo = sqliteDbExists() ? openRepository() : null;
     try {
-      const listings = listListings(repo, { borough, source, limit });
-      return NextResponse.json({ listings, source: "sqlite" });
+      const listings = await listListingsAuto(repo, { borough, source, limit });
+      return NextResponse.json({
+        listings,
+        source: sqliteDbExists() ? "sqlite" : "clickhouse",
+      });
     } finally {
-      repo.close();
+      repo?.close();
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

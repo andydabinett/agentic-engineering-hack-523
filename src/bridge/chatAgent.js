@@ -13,8 +13,12 @@ import {
   SessionManager,
 } from "@mariozechner/pi-coding-agent";
 import { ROOT } from "../config/env.js";
+import { startAgentScrape } from "../crawler/agentScrape.js";
 
 const AGENT_DIR = path.join(ROOT, "agent");
+
+/** Criteria from the latest chat request (for borough-aware scrapes). */
+let latestSearchCriteria = null;
 
 const updateCriteriaTool = defineTool({
   name: "update_criteria",
@@ -48,6 +52,58 @@ const readyToSearchTool = defineTool({
   },
 });
 
+const scrapeListingsTool = defineTool({
+  name: "scrape_listings",
+  label: "Scrape listings now",
+  description:
+    "Pull fresh Craigslist and StreetEasy rentals immediately. Use when the user asks to search, scrape, refresh listings, find apartments now, check what's available, or run a new hunt — including between scheduled background crawls.",
+  parameters: Type.Object({
+    boroughs: Type.Optional(
+      Type.Array(
+        Type.Union([
+          Type.Literal("manhattan"),
+          Type.Literal("brooklyn"),
+          Type.Literal("queens"),
+          Type.Literal("bronx"),
+          Type.Literal("staten_island"),
+          Type.Literal("all"),
+        ]),
+      ),
+    ),
+    maxResults: Type.Optional(Type.Number()),
+    neighborhood: Type.Optional(Type.String()),
+  }),
+  async execute(params) {
+    if (!process.env.NIMBLE_API_KEY?.trim()) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: "NIMBLE_API_KEY is not configured — cannot scrape listings.",
+          },
+        ],
+        details: { ok: false, status: "error" },
+      };
+    }
+
+    const result = startAgentScrape({
+      boroughs: params.boroughs,
+      maxResults: params.maxResults,
+      neighborhood: params.neighborhood,
+      criteria: latestSearchCriteria,
+    });
+
+    const text = result.ok
+      ? result.message
+      : result.message || "A scrape is already in progress.";
+
+    return {
+      content: [{ type: "text", text }],
+      details: result,
+    };
+  },
+});
+
 const ONBOARDING_APPEND = `
 ## Web onboarding chat
 
@@ -57,7 +113,9 @@ You are helping a tenant define apartment search criteria in a short conversatio
 - When you learn a preference, call \`update_criteria\` with the correct \`field\` and \`value\`.
 - For \`amenities\` and \`dealBreakers\`, pass a single string per call (the UI adds chips one at a time).
 - When you have bedrooms, max monthly budget, neighborhood, move-in date, and the main must-haves / deal-breakers, call \`ready_to_search\` and invite them to start hunting.
-- You MUST call the \`update_criteria\` and \`ready_to_search\` tools — never write tool calls as XML or markdown in the message body.
+- When the user wants listings pulled **now** (search, refresh, scrape, "what's out there", "find apartments", "run a search"), call \`scrape_listings\`. Pass \`boroughs\` from their neighborhood when known; otherwise \`["all"]\` or the relevant borough id.
+- After calling \`scrape_listings\`, tell them fresh results will appear on the dashboard in a few minutes — they do not need to wait for the background crawler.
+- You MUST call tools for criteria, readiness, and scrapes — never write tool calls as XML or markdown in the message body.
 - Do not mention tool names to the user; just chat naturally.
 `.trim();
 
@@ -88,8 +146,8 @@ async function createChatSession() {
   const { session } = await createAgentSession({
     cwd: ROOT,
     agentDir: AGENT_DIR,
-    tools: ["update_criteria", "ready_to_search"],
-    customTools: [updateCriteriaTool, readyToSearchTool],
+    tools: ["update_criteria", "ready_to_search", "scrape_listings"],
+    customTools: [updateCriteriaTool, readyToSearchTool, scrapeListingsTool],
     resourceLoader,
     sessionManager: SessionManager.inMemory(),
   });
@@ -151,6 +209,7 @@ export async function handleChatRequest(req) {
   }
 
   const messages = body.messages ?? [];
+  latestSearchCriteria = body.criteria ?? null;
   const userTurns = countUserTurns(messages);
   const promptText = extractLastUserText(messages);
 
@@ -207,7 +266,11 @@ export async function handleChatRequest(req) {
 
         if (event.type === "tool_execution_start") {
           const { toolName, toolCallId, args } = event;
-          if (toolName === "update_criteria" || toolName === "ready_to_search") {
+          if (
+            toolName === "update_criteria" ||
+            toolName === "ready_to_search" ||
+            toolName === "scrape_listings"
+          ) {
             send({
               type: "tool-input-available",
               toolCallId,

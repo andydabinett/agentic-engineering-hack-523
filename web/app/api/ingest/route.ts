@@ -50,6 +50,9 @@ export async function POST(request: Request) {
     "--depth",
     "deep",
   ];
+  if (process.env.CLOUD_INGEST === "1") {
+    args.push("--no-playwright");
+  }
 
   try {
     const result = await runIngest(args);

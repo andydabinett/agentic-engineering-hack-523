@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ClientTime } from "@/components/client-time";
+import { pollUntilScrapeDone } from "@/lib/scrapePoll";
 import { useAppStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
@@ -32,11 +33,15 @@ interface ChatPanelProps {
 }
 
 export function ChatPanel({ variant = "page" }: ChatPanelProps) {
+  const criteria = useAppStore((s) => s.criteria);
   const applyCriteriaUpdate = useAppStore((s) => s.applyCriteriaUpdate);
   const markReadyToSearch = useAppStore((s) => s.markReadyToSearch);
+  const setListings = useAppStore((s) => s.setListings);
+  const setStatusCounts = useAppStore((s) => s.setStatusCounts);
 
   const { messages, sendMessage, status } = useChat({
     messages: [SEED_MESSAGE],
+    body: { criteria },
     onData: (part) => {
       // Custom data parts: data-update-criteria / data-ready-to-search
       if (part.type === "data-update-criteria") {
@@ -56,6 +61,18 @@ export function ChatPanel({ variant = "page" }: ChatPanelProps) {
         applyCriteriaUpdate(field as never, value);
       } else if (toolCall.toolName === "ready_to_search") {
         markReadyToSearch();
+      } else if (toolCall.toolName === "scrape_listings") {
+        pollUntilScrapeDone((listings, stats) => {
+          if (listings.length) setListings(listings);
+          if (stats) {
+            setStatusCounts({
+              listingsMonitored: stats.listingsMonitored,
+              matches: stats.matches,
+              brokersTexted: stats.brokersTexted,
+              viewingsScheduled: stats.viewingsScheduled,
+            });
+          }
+        });
       }
     },
   });
