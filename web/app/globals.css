@@ -1,0 +1,142 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* --- Surfaces (warm paper) --- */
+    --canvas: 48 25% 98%;            /* #FAFAF7 off-white */
+    --surface: 48 25% 100%;          /* card surface */
+    --surface-raised: 40 14% 96%;    /* very gentle hover */
+
+    /* --- Ink (warm near-black) --- */
+    --ink: 60 6% 6%;                 /* #0F0F0E */
+    --ink-muted: 40 6% 38%;          /* secondary text */
+    --ink-faint: 40 6% 60%;          /* placeholders, timestamps */
+
+    /* --- Borders / rules --- */
+    --rule: 36 12% 89%;              /* #E8E5E0 warm gray */
+    --rule-strong: 36 10% 78%;
+
+    /* --- Accent: burnt orange #C84A1B --- */
+    --accent: 14 76% 45%;
+    --accent-ink: 0 0% 100%;
+    --accent-soft: 14 76% 95%;
+    --accent-deep: 14 76% 35%;
+
+    /* --- Signal colors (muted, editorial) --- */
+    --signal-green: 152 48% 36%;
+    --signal-green-soft: 152 40% 94%;
+    --signal-amber: 35 78% 44%;
+    --signal-amber-soft: 35 78% 94%;
+    --signal-blue: 212 56% 42%;
+    --signal-blue-soft: 212 56% 95%;
+    --signal-purple: 268 38% 48%;
+    --signal-purple-soft: 268 38% 95%;
+    --signal-gray: 36 6% 48%;
+    --signal-gray-soft: 36 8% 94%;
+    --signal-red: 6 70% 48%;
+
+    --radius: 0.625rem;
+
+    /* shadcn compatibility aliases (used by primitive components) */
+    --background: var(--canvas);
+    --foreground: var(--ink);
+    --card: var(--surface);
+    --card-foreground: var(--ink);
+    --popover: var(--surface);
+    --popover-foreground: var(--ink);
+    --primary: var(--accent);
+    --primary-foreground: var(--accent-ink);
+    --secondary: var(--surface-raised);
+    --secondary-foreground: var(--ink);
+    --muted: var(--surface-raised);
+    --muted-foreground: var(--ink-muted);
+    --destructive: 0 70% 48%;
+    --destructive-foreground: 0 0% 100%;
+    --border: var(--rule);
+    --input: var(--rule);
+    --ring: var(--accent);
+  }
+
+  * {
+    border-color: hsl(var(--rule));
+  }
+
+  html,
+  body {
+    background-color: hsl(var(--canvas));
+    color: hsl(var(--ink));
+    font-feature-settings: "cv11", "ss01", "ss03";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  }
+
+  /* Serif numerals look better with tabular figures in prices */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Subtle focus ring */
+  :focus-visible {
+    outline: 2px solid hsl(var(--accent) / 0.5);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Keep the editorial feel: lighten scrollbars */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--rule-strong) / 0.5);
+    border-radius: 999px;
+    border: 2px solid hsl(var(--canvas));
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--rule-strong));
+  }
+}
+
+/* Keyframes used by inline animation styles (Tailwind only emits
+   keyframes that are referenced via an `animate-*` class). */
+@keyframes typing-dot {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30%           { transform: translateY(-3px); opacity: 1; }
+}
+
+@layer components {
+  /* Accent gradient used for the "Start hunting" CTA when ready */
+  .accent-glow {
+    background-image: linear-gradient(
+      110deg,
+      hsl(var(--accent)) 0%,
+      hsl(var(--accent-deep)) 35%,
+      hsl(var(--accent)) 65%,
+      hsl(var(--accent-deep)) 100%
+    );
+    background-size: 220% 220%;
+    animation: gradient-glow 3.6s ease-in-out infinite;
+    box-shadow:
+      0 1px 0 0 hsl(var(--accent-deep) / 0.5) inset,
+      0 0 0 1px hsl(var(--accent-deep) / 0.25),
+      0 8px 24px -8px hsl(var(--accent) / 0.45);
+  }
+
+  /* The dotted hairline used to separate editorial sections */
+  .editorial-rule {
+    background-image: radial-gradient(circle, hsl(var(--rule-strong)) 1px, transparent 1px);
+    background-size: 6px 1px;
+    background-repeat: repeat-x;
+    background-position: left center;
+    height: 1px;
+  }
+}
