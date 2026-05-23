@@ -44,6 +44,7 @@ interface AppState {
   ) => void;
   markReadyToSearch: () => void;
   resetCriteria: () => void;
+  updateCriteria: (updates: Partial<SearchCriteria>) => void;
 
   // listings
   listings: Listing[];
@@ -96,7 +97,15 @@ interface AppState {
 
 export const useAppStore = create<AppState>((set) => ({
   // -- criteria --
-  criteria: { ...blankCriteria },
+  criteria: {
+    bedrooms: 1,
+    maxPrice: 3800,
+    neighborhood: "East Village",
+    moveInDate: "June 1st, 2026",
+    amenities: ["laundry-in-unit", "dishwasher", "pet-friendly", "elevator"],
+    dealBreakers: ["no-elevator", "broker-fee"],
+    readyToSearch: true,
+  },
   applyCriteriaUpdate: (field, value) =>
     set((state) => {
       const next = { ...state.criteria };
@@ -116,6 +125,8 @@ export const useAppStore = create<AppState>((set) => ({
   markReadyToSearch: () =>
     set((state) => ({ criteria: { ...state.criteria, readyToSearch: true } })),
   resetCriteria: () => set({ criteria: { ...blankCriteria } }),
+  updateCriteria: (updates) =>
+    set((state) => ({ criteria: { ...state.criteria, ...updates } })),
 
   // -- listings --
   listings: [],
