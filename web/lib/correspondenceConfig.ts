@@ -1,22 +1,39 @@
 let cachedFakeDemo: boolean | null = null;
+let cachedDevRoutes: boolean | null = null;
 
 export async function isFakeCorrespondenceDemo(): Promise<boolean> {
-  if (typeof window === "undefined") return false;
-  if (process.env.NEXT_PUBLIC_CORRESPONDENCE_FAKE_DEMO === "1") return true;
-  if (cachedFakeDemo !== null) return cachedFakeDemo;
+  await refreshCorrespondenceConfig();
+  return cachedFakeDemo ?? false;
+}
+
+/** Dev outreach (Virtual Phone fallback, simulate-reply). */
+export async function isCorrespondenceDevMode(): Promise<boolean> {
+  await refreshCorrespondenceConfig();
+  return cachedDevRoutes ?? false;
+}
+
+async function refreshCorrespondenceConfig() {
+  if (typeof window === "undefined") return;
+  if (process.env.NEXT_PUBLIC_CORRESPONDENCE_FAKE_DEMO === "1") {
+    cachedFakeDemo = true;
+    cachedDevRoutes = true;
+    return;
+  }
+  if (cachedFakeDemo !== null && cachedDevRoutes !== null) return;
 
   try {
     const res = await fetch("/api/correspondence/config", { cache: "no-store" });
     if (!res.ok) {
       cachedFakeDemo = false;
-      return false;
+      cachedDevRoutes = false;
+      return;
     }
-    const data = (await res.json()) as { fakeDemo?: boolean };
+    const data = (await res.json()) as { fakeDemo?: boolean; devRoutes?: boolean };
     cachedFakeDemo = Boolean(data.fakeDemo);
-    return cachedFakeDemo;
+    cachedDevRoutes = Boolean(data.devRoutes);
   } catch {
     cachedFakeDemo = false;
-    return false;
+    cachedDevRoutes = false;
   }
 }
 

@@ -6,7 +6,10 @@ import {
 } from "./runner.ts";
 
 export function createAgentRunner(config: Config): CorrespondenceAgentRunner {
-  if (config.openRouterApiKey) {
+  const usePi =
+    Boolean(config.openRouterApiKey) &&
+    process.env.CORRESPONDENCE_USE_PI_AGENT === "1";
+  if (usePi) {
     return new PiCorrespondenceAgent(config);
   }
   return new ScriptedCorrespondenceAgent();

@@ -47,19 +47,23 @@ export async function ingestBoroughSource(
 
   let playwrightUsed = 0;
 
+  console.log(`  [${borough.id}/${source}] searching (${searchDepth})…`);
   const { listings, response } = await searchRentals(borough, source, {
     maxResults,
     searchDepth,
     neighborhood,
     client: nimble,
   });
+  console.log(`  [${borough.id}/${source}] search returned ${listings.length} hit(s)`);
 
   let candidates = listings;
   if (enrich) {
+    console.log(`  [${borough.id}/${source}] discovering listing URLs…`);
     candidates = await discoverListingCandidates(listings, source, {
       client: nimble,
       extractIndexPages: true,
     });
+    console.log(`  [${borough.id}/${source}] ${candidates.length} candidate(s)`);
   }
 
   let stored = 0;
@@ -76,7 +80,8 @@ export async function ingestBoroughSource(
     .filter((item) => matchesNeighborhood(`${item.title} ${item.snippet}`))
     .slice(0, maxResults);
 
-  for (const item of toProcess) {
+  for (let i = 0; i < toProcess.length; i += 1) {
+    const item = toProcess[i];
     if (!item.url) {
       skipped += 1;
       continue;
@@ -84,6 +89,9 @@ export async function ingestBoroughSource(
 
     let record;
     if (enrich) {
+      console.log(
+        `  [${borough.id}/${source}] enrich ${i + 1}/${toProcess.length}: ${item.url.slice(0, 72)}…`,
+      );
       try {
         const enriched = await enrichListingDetail(
           { ...item, borough: borough.id },

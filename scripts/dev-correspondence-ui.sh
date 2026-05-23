@@ -4,7 +4,18 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-WEB_PORT="${WEB_PORT:-3000}"
+if [[ -s "$HOME/.nvm/nvm.sh" ]]; then
+  # shellcheck disable=SC1091
+  source "$HOME/.nvm/nvm.sh"
+  nvm use >/dev/null 2>&1 || true
+fi
+
+node_major="$(node -p "process.versions.node.split('.')[0]")"
+if [[ "$node_major" -lt 22 ]]; then
+  echo "Node.js 22+ is required (ingest uses node:sqlite). Run: nvm install && nvm use"
+  exit 1
+fi
+
 export CORRESPONDENCE_DEV=1
 export CORRESPONDENCE_FAKE_DEMO=0
 
@@ -25,6 +36,35 @@ if [[ -z "${TWILIO_ACCOUNT_SID:-}" || -z "${TWILIO_AUTH_TOKEN:-}" || -z "${TWILI
   exit 1
 fi
 
+port_in_use() {
+  lsof -i ":$1" -sTCP:LISTEN >/dev/null 2>&1
+}
+
+pick_web_port() {
+  local port="${WEB_PORT:-3000}"
+  local start="$port"
+  local max_port=$((start + 100))
+
+  while port_in_use "$port"; do
+    if [[ "$port" -eq "$start" ]]; then
+      echo "Port ${port} is in use — incrementing..." >&2
+    fi
+    port=$((port + 1))
+    if [[ "$port" -gt "$max_port" ]]; then
+      echo "No free port found between ${start} and ${max_port}." >&2
+      exit 1
+    fi
+  done
+
+  if [[ "$port" -ne "$start" ]]; then
+    echo "Using port ${port}." >&2
+  fi
+  echo "$port"
+}
+
+WEB_PORT="$(pick_web_port)"
+WEB_LOG="/tmp/javier-next-web.log"
+
 cleanup() {
   if [[ -n "${WEB_PID:-}" ]]; then
     kill "$WEB_PID" 2>/dev/null || true
@@ -36,23 +76,51 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 echo "Starting Next.js dashboard on :${WEB_PORT} (correspondence in-process)..."
+: > "$WEB_LOG"
 (
   cd web
   npm run dev -- -p "$WEB_PORT"
-) &
+) >>"$WEB_LOG" 2>&1 &
 WEB_PID=$!
 
 echo "Waiting for Next.js..."
-for _ in $(seq 1 60); do
+ready=0
+for _ in $(seq 1 90); do
+  if ! kill -0 "$WEB_PID" 2>/dev/null; then
+    echo ""
+    echo "Next.js failed to start. Last log lines:"
+    tail -20 "$WEB_LOG" || true
+    exit 1
+  fi
+
+  if grep -q "EADDRINUSE" "$WEB_LOG" 2>/dev/null; then
+    echo ""
+    echo "Next.js could not bind to :${WEB_PORT}. Last log lines:"
+    tail -20 "$WEB_LOG" || true
+    exit 1
+  fi
+
   if curl -fsS "http://127.0.0.1:${WEB_PORT}/" >/dev/null 2>&1; then
-    break
+    if grep -qE "Ready in|started server on|Local:" "$WEB_LOG" 2>/dev/null; then
+      ready=1
+      break
+    fi
   fi
   sleep 1
 done
 
+if [[ "$ready" -ne 1 ]]; then
+  echo ""
+  echo "Timed out waiting for Next.js on :${WEB_PORT}. Last log lines:"
+  tail -20 "$WEB_LOG" || true
+  exit 1
+fi
+
 echo "Starting ngrok tunnel to :${WEB_PORT}..."
 ngrok http "$WEB_PORT" --log=stdout > /tmp/javier-ngrok-web.log 2>&1 &
 NGROK_PID=$!
+
+sleep 2
 
 echo "Syncing Twilio webhook to Next route (/api/webhooks/twilio/sms)..."
 if npx tsx scripts/sync-twilio-webhook.ts --next; then

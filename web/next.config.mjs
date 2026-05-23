@@ -2,17 +2,21 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+/** Monorepo root (parent of `web/`). */
 const repoRoot = path.resolve(__dirname, "..");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   experimental: {
+    outputFileTracingRoot: repoRoot,
     serverComponentsExternalPackages: [
       "@clickhouse/client",
       "@mariozechner/pi-coding-agent",
       "@mariozechner/pi-agent-core",
       "@mariozechner/pi-ai",
+      "tsx",
+      "esbuild",
     ],
   },
   images: {

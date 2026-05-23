@@ -2,14 +2,14 @@ import path from "path";
 import { pathToFileURL } from "url";
 
 import { ROOT } from "../config/env.js";
+import { importFromRoot, registerTsLoader } from "./tsLoader.js";
 
 let servicePromise;
 
 async function loadService() {
   if (!servicePromise) {
-    servicePromise = import(
-      pathToFileURL(path.join(ROOT, "src/correspondence/service.ts")).href
-    );
+    await registerTsLoader();
+    servicePromise = importFromRoot("src/correspondence/service.ts");
   }
   return servicePromise;
 }
@@ -39,12 +39,10 @@ export async function processTwilioSmsWebhook(input) {
   return service.processTwilioSmsWebhook(input);
 }
 
-export async function twilioWebhookUrlForRequest(headers, path = "/api/webhooks/twilio/sms") {
+export async function twilioWebhookUrlForRequest(headers, pathSuffix = "/api/webhooks/twilio/sms") {
   const service = await loadService();
-  const configMod = await import(
-    pathToFileURL(path.join(ROOT, "src/config.ts")).href
-  );
-  return service.twilioWebhookUrlFromRequest(configMod.loadConfig(), headers, path);
+  const configMod = await importFromRoot("src/config.ts");
+  return service.twilioWebhookUrlFromRequest(configMod.loadConfig(), headers, pathSuffix);
 }
 
 export {
@@ -52,7 +50,9 @@ export {
   canStartCorrespondence,
   correspondenceDevEnabled,
   correspondenceFakeDemoEnabled,
+  correspondenceForceDemoLister,
   demoListerPhone,
+  resolveListerPhone,
   twilioConfiguredForCorrespondence,
   useDemoListerPhoneFallback,
 } from "./correspondenceClient.js";

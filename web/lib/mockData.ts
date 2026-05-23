@@ -19,9 +19,18 @@ const minutesAgo = (n: number) => new Date(NOW.getTime() - n * 60_000);
 const hoursAgo = (n: number) => minutesAgo(n * 60);
 
 /**
- * Returns a Date at `time` (HH:mm) on the next occurrence of `weekday`
- * (0=Sun … 6=Sat) at or after NOW.
+ * Next occurrence of weekday (0=Sun … 6=Sat) at HH:mm strictly after NOW.
  */
+function upcomingSlot(weekday: number, hour: number, minute = 0): Date {
+  for (let offset = 0; offset <= 7; offset += 1) {
+    const d = new Date(NOW);
+    d.setDate(d.getDate() + offset);
+    if (d.getDay() !== weekday) continue;
+    d.setHours(hour, minute, 0, 0);
+    if (d > NOW) return d;
+  }
+  return nextWeekday(weekday, hour, minute);
+}
 function nextWeekday(weekday: number, hour: number, minute = 0): Date {
   const d = new Date(NOW);
   const delta = (weekday + 7 - d.getDay()) % 7 || 7;
@@ -431,24 +440,24 @@ export const viewings: Viewing[] = [
     listingId: "listing-1",
     address: "234 E 10th St #4B",
     brokerName: "Jamie Carter",
-    startTime: nextWeekday(2, 18, 0), // Tue 6:00 pm
-    endTime: nextWeekday(2, 18, 30),
+    startTime: upcomingSlot(0, 14, 0), // next Sun 2:00 pm
+    endTime: new Date(upcomingSlot(0, 14, 0).getTime() + 30 * 60_000),
   },
   {
     id: "viewing-2",
     listingId: "listing-2",
     address: "511 E 7th St #2C",
     brokerName: "Priya Aggarwal",
-    startTime: nextWeekday(4, 17, 30), // Thu 5:30 pm
-    endTime: nextWeekday(4, 18, 0),
+    startTime: upcomingSlot(2, 18, 0), // next Tue 6:00 pm
+    endTime: new Date(upcomingSlot(2, 18, 0).getTime() + 30 * 60_000),
   },
   {
     id: "viewing-3",
     listingId: "listing-3",
     address: "17 St Marks Pl #3R",
     brokerName: "Daniel Okafor",
-    startTime: nextWeekday(6, 11, 0), // Sat 11:00 am
-    endTime: nextWeekday(6, 11, 30),
+    startTime: upcomingSlot(4, 11, 0), // next Thu 11:00 am
+    endTime: new Date(upcomingSlot(4, 11, 0).getTime() + 30 * 60_000),
   },
 ];
 

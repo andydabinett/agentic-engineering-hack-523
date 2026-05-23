@@ -62,8 +62,15 @@ export class CorrespondenceOrchestrator {
     }
 
     await this.store.addMessage(thread.threadId, "inbound", body, twilioSid);
+    const { thread: resolvedThread, messages } = await this.resolveThreadView(
+      thread.threadId,
+    );
     const inboundStatus = statusAfterInbound(body);
-    await this.transition(thread.threadId, inboundStatus);
+    await this.applyTransition(
+      thread.threadId,
+      resolvedThread.status,
+      inboundStatus,
+    );
 
     await this.runAgent(
       thread.threadId,
@@ -73,11 +80,7 @@ export class CorrespondenceOrchestrator {
   }
 
   async getThreadView(threadId: string): Promise<ThreadView> {
-    const thread = await this.store.getThread(threadId);
-    if (!thread) {
-      throw new Error(`Thread not found: ${threadId}`);
-    }
-    const messages = await this.store.getMessages(threadId);
+    const { thread, messages } = await this.resolveThreadView(threadId);
     return { thread, messages };
   }
 
@@ -103,10 +106,7 @@ export class CorrespondenceOrchestrator {
   }
 
   async sendSms(threadId: string, body: string): Promise<CorrespondenceMessage> {
-    const thread = await this.store.getThread(threadId);
-    if (!thread) {
-      throw new Error(`Thread not found: ${threadId}`);
-    }
+    const { thread } = await this.resolveThreadView(threadId);
 
     const trimmed = body.trim().slice(0, 320);
     if (!trimmed) {
@@ -123,14 +123,16 @@ export class CorrespondenceOrchestrator {
       );
       const messages = await this.store.getMessages(threadId);
       const outboundCount = messages.filter((m) => m.direction === "outbound").length;
+      let status = thread.status;
       const nextStatus = statusAfterOutbound(
-        thread.status,
+        status,
         outboundCount === 1,
         trimmed,
       );
-      await this.transition(threadId, nextStatus);
+      await this.applyTransition(threadId, status, nextStatus);
+      status = nextStatus;
       if (nextStatus === "outreach_sent") {
-        await this.transition(threadId, "awaiting_lister_reply");
+        await this.applyTransition(threadId, status, "awaiting_lister_reply");
       }
       return message;
     } catch (error) {
@@ -177,9 +179,8 @@ export class CorrespondenceOrchestrator {
     await this.store.updateThread(threadId, {
       proposedViewingAt: input.start,
       calendarEventId: event.id,
-      status: "calendar_event_created",
+      status: "completed",
     });
-    await this.transition(threadId, "completed");
     return { eventId: event.id, htmlLink: event.htmlLink };
   }
 
@@ -200,19 +201,58 @@ export class CorrespondenceOrchestrator {
       .join("\n");
   }
 
-  private async transition(
-    threadId: string,
-    to: CorrespondenceThread["status"],
-  ): Promise<void> {
+  private inferStatusFromMessages(
+    storedStatus: CorrespondenceThread["status"],
+    messages: CorrespondenceMessage[],
+    thread?: CorrespondenceThread,
+  ): CorrespondenceThread["status"] {
+    if (thread?.calendarEventId && storedStatus !== "failed") {
+      return "completed";
+    }
+
+    const outbound = messages.filter((m) => m.direction === "outbound").length;
+    const inbound = messages.filter((m) => m.direction === "inbound").length;
+
+    if (storedStatus === "initiated" && outbound > 0) {
+      return inbound === 0 ? "awaiting_lister_reply" : "negotiating_time";
+    }
+    if (storedStatus === "outreach_sent" && inbound > 0) {
+      return "negotiating_time";
+    }
+    return storedStatus;
+  }
+
+  private async resolveThreadView(threadId: string): Promise<ThreadView> {
     const thread = await this.store.getThread(threadId);
     if (!thread) {
       throw new Error(`Thread not found: ${threadId}`);
     }
-    if (thread.status === to) {
+    const messages = await this.store.getMessages(threadId);
+    const status = this.inferStatusFromMessages(thread.status, messages, thread);
+    if (status === thread.status) {
+      return { thread, messages };
+    }
+    return { thread: { ...thread, status }, messages };
+  }
+
+  private async applyTransition(
+    threadId: string,
+    from: CorrespondenceThread["status"],
+    to: CorrespondenceThread["status"],
+  ): Promise<void> {
+    if (from === to) {
       return;
     }
-    assertTransition(thread.status, to);
+    assertTransition(from, to);
     await this.store.updateThread(threadId, { status: to });
+  }
+
+  private async transition(
+    threadId: string,
+    to: CorrespondenceThread["status"],
+  ): Promise<void> {
+    const { thread } = await this.resolveThreadView(threadId);
+    await this.applyTransition(threadId, thread.status, to);
   }
 
   private async fail(threadId: string, message: string): Promise<void> {

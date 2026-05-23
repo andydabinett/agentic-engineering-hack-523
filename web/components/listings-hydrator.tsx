@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { usePathname } from "next/navigation";
 import { toast } from "sonner";
 import {
   fetchListingsFromApi,
@@ -57,13 +56,10 @@ function notifyNewListings(newListings: Listing[]) {
 
 /** Loads listings, polls for crawler/agent updates, highlights fresh matches. */
 export function ListingsHydrator() {
-  const pathname = usePathname();
   const setListings = useAppStore((s) => s.setListings);
   const mergeLiveListings = useAppStore((s) => s.mergeLiveListings);
   const pruneStaleFreshListings = useAppStore((s) => s.pruneStaleFreshListings);
   const setStatusCounts = useAppStore((s) => s.setStatusCounts);
-  const conversations = useAppStore((s) => s.conversations);
-  const viewings = useAppStore((s) => s.viewings);
 
   const lastSyncAt = useRef<string | null>(null);
   const initialLoadDone = useRef(false);
@@ -89,11 +85,12 @@ export function ListingsHydrator() {
     const applyStats = async () => {
       const stats = await fetchPipelineStats();
       if (cancelled || !stats) return;
+      const state = useAppStore.getState();
       setStatusCounts({
         listingsMonitored: stats.listingsMonitored,
         matches: stats.matches,
-        brokersTexted: conversations.length || stats.brokersTexted,
-        viewingsScheduled: viewings.length || stats.viewingsScheduled,
+        brokersTexted: state.conversations.length || stats.brokersTexted,
+        viewingsScheduled: state.viewings.length || stats.viewingsScheduled,
       });
     };
 
@@ -110,7 +107,8 @@ export function ListingsHydrator() {
 
       if (!initialLoadDone.current || mode === "full") {
         initialLoadDone.current = true;
-        if (incoming.length) {
+        // Don't wipe a good feed if a refetch returns empty (e.g. transient API error).
+        if (incoming.length > 0 || prev.length === 0) {
           setListings(incoming);
         }
         return;
@@ -131,7 +129,14 @@ export function ListingsHydrator() {
       } catch (err) {
         if (!cancelled) {
           console.warn("Pipeline hydrate failed", err);
-          toast.error("Could not load live listings — is the API running?");
+          const message =
+            err instanceof Error ? err.message : "Could not load live listings";
+          toast.error(message, {
+            description:
+              message.includes("Node.js 22")
+                ? undefined
+                : "Check the terminal where npm run web:dev is running.",
+          });
         }
       }
     };
@@ -157,13 +162,10 @@ export function ListingsHydrator() {
       window.clearInterval(pruneId);
     };
   }, [
-    pathname,
     setListings,
     mergeLiveListings,
     pruneStaleFreshListings,
     setStatusCounts,
-    conversations.length,
-    viewings.length,
   ]);
 
   return null;

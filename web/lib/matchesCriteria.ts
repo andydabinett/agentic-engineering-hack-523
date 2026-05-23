@@ -17,7 +17,7 @@ export function listingMatchesCriteria(
 
   const hood = criteria.neighborhood?.trim().toLowerCase();
   if (hood) {
-    const hay = `${listing.address} ${listing.neighborhood} ${listing.borough ?? ""}`.toLowerCase();
+    const hay = `${listing.address} ${listing.neighborhood} ${listing.borough ?? ""} ${listing.description ?? ""}`.toLowerCase();
     const slug = hood.replace(/\s+/g, "_");
     if (!hay.includes(hood) && !hay.includes(slug.replace(/_/g, " "))) {
       return false;

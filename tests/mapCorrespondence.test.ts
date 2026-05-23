@@ -4,6 +4,8 @@ import {
   correspondenceToListingStatus,
   mapCorrespondenceMessages,
   mapCorrespondenceToConversation,
+  mergeUiMessages,
+  sortCorrespondenceMessages,
 } from "../web/lib/mapCorrespondence.ts";
 
 describe("mapCorrespondence", () => {
@@ -48,5 +50,65 @@ describe("mapCorrespondence", () => {
 
     expect(conversation.correspondenceThreadId).toBe("thread-1");
     expect(conversation.id).toBe("conv-thread-1");
+  });
+
+  it("sorts messages chronologically with inbound before outbound at same time", () => {
+    const sorted = sortCorrespondenceMessages([
+      {
+        messageId: "m3",
+        direction: "outbound",
+        body: "Confirmed",
+        sentAt: "2026-05-23T12:00:00.000Z",
+      },
+      {
+        messageId: "m1",
+        direction: "outbound",
+        body: "Hello",
+        sentAt: "2026-05-23T11:59:00.000Z",
+      },
+      {
+        messageId: "m2",
+        direction: "inbound",
+        body: "Yes Saturday works",
+        sentAt: "2026-05-23T12:00:00.000Z",
+      },
+    ]);
+
+    expect(sorted.map((m) => m.messageId)).toEqual(["m1", "m2", "m3"]);
+  });
+
+  it("mergeUiMessages keeps all messages from stale and fresh polls", () => {
+    const merged = mergeUiMessages(
+      mapCorrespondenceMessages([
+        {
+          messageId: "m1",
+          direction: "outbound",
+          body: "Hello",
+          sentAt: "2026-05-23T11:59:00.000Z",
+        },
+        {
+          messageId: "m2",
+          direction: "inbound",
+          body: "Yes",
+          sentAt: "2026-05-23T12:00:00.000Z",
+        },
+        {
+          messageId: "m3",
+          direction: "outbound",
+          body: "Booked",
+          sentAt: "2026-05-23T12:00:01.000Z",
+        },
+      ]),
+      mapCorrespondenceMessages([
+        {
+          messageId: "m1",
+          direction: "outbound",
+          body: "Hello",
+          sentAt: "2026-05-23T11:59:00.000Z",
+        },
+      ]),
+    );
+
+    expect(merged.map((m) => m.id)).toEqual(["m1", "m2", "m3"]);
   });
 });

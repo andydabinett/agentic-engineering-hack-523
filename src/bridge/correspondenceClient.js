@@ -1,4 +1,7 @@
 import { normalizePhone } from "./normalizePhone.js";
+import { correspondenceFakeDemoEnabled } from "../correspondence/fakeDemo.js";
+
+export { correspondenceFakeDemoEnabled } from "../correspondence/fakeDemo.js";
 
 const DEFAULT_USER_ID = "web-user";
 
@@ -17,10 +20,6 @@ export function twilioConfiguredForCorrespondence() {
   );
 }
 
-export function correspondenceFakeDemoEnabled() {
-  return process.env.CORRESPONDENCE_FAKE_DEMO === "1";
-}
-
 export function demoListerPhone() {
   return process.env.DEMO_LISTER_PHONE || "+18777804236";
 }
@@ -31,9 +30,32 @@ export function correspondenceDevEnabled() {
   );
 }
 
+/** Dev-only: always SMS DEMO_LISTER_PHONE (Virtual Phone) instead of listing brokerPhone. */
+export function correspondenceForceDemoLister() {
+  return (
+    process.env.CORRESPONDENCE_FORCE_DEMO_LISTER === "1" && correspondenceDevEnabled()
+  );
+}
+
 /** Use Virtual Phone / demo lister when fake demo or local dev outreach. */
 export function useDemoListerPhoneFallback() {
   return correspondenceFakeDemoEnabled() || correspondenceDevEnabled();
+}
+
+/**
+ * Pick lister phone for outreach (explicit > broker > demo fallback).
+ * @param {{ explicitPhone?: string; brokerPhone?: string }} input
+ */
+export function resolveListerPhone(input = {}) {
+  if (correspondenceForceDemoLister()) {
+    return demoListerPhone();
+  }
+  const explicit = input.explicitPhone?.trim();
+  if (explicit) return explicit;
+  const broker = input.brokerPhone?.trim();
+  if (broker) return broker;
+  if (useDemoListerPhoneFallback()) return demoListerPhone();
+  return "";
 }
 
 export function canStartCorrespondence() {

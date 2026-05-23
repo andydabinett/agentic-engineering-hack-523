@@ -33,12 +33,12 @@ cp .env.example .env
 One command: Next dashboard, ngrok on `:3000`, Twilio webhook → in-process orchestrator.
 
 ```bash
-# .env: TWILIO_* set, CORRESPONDENCE_FAKE_DEMO=0, DEMO_LISTER_PHONE=+18777804236
+# .env: TWILIO_* set, CORRESPONDENCE_FAKE_DEMO=0, CORRESPONDENCE_FORCE_DEMO_LISTER=1, DEMO_LISTER_PHONE=+18777804236
 npm run dev:correspondence:ui
 ```
 
 1. Open http://localhost:3000
-2. Click **Reach out** on a **matched** listing (uses `DEMO_LISTER_PHONE` when the listing has no broker phone)
+2. Click **Reach out** on any **matched** listing (with `CORRESPONDENCE_FORCE_DEMO_LISTER=1`, all outreach goes to the Virtual Phone)
 3. Reply on the [Twilio Virtual Phone](https://console.twilio.com/us1/develop/phone-numbers/manage/incoming) — e.g. *"Saturday afternoon works"*
 4. Watch **Messages** and **Viewings** update; thread ends at `completed`
 

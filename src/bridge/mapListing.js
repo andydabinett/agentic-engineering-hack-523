@@ -66,6 +66,11 @@ function matchScoreFromRow(row) {
   return 76;
 }
 
+function demoBrokerPhone(rowId) {
+  const suffix = String(Number(rowId) || 0).padStart(4, '0').slice(-4);
+  return `+1555010${suffix}`;
+}
+
 /** Map SQLite listing row → JSON shape consumed by web/lib/types Listing */
 export function mapRowToWebListing(row) {
   const title = row.title || 'NYC rental';
@@ -80,7 +85,9 @@ export function mapRowToWebListing(row) {
     sqftApprox: 650,
     photos: photosFromRow(row),
     brokerName: row.agent_name && !row.agent_name.endsWith(':') ? row.agent_name : 'Contact',
-    brokerPhone: row.agent_phone || '',
+    brokerPhone:
+      row.agent_phone ||
+      (process.env.CORRESPONDENCE_FAKE_DEMO === '1' ? demoBrokerPhone(row.id) : ''),
     listedAt: row.first_seen_at || row.last_seen_at || new Date().toISOString(),
     matchScore: matchScoreFromRow(row),
     status: mapDbStatus(row.status),

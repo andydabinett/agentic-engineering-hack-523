@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
+import { loadCorrespondenceBridge } from "@/lib/server/repo";
 
 export const runtime = "nodejs";
 
 export async function GET() {
+  const { correspondenceFakeDemoEnabled, correspondenceDevEnabled } =
+    await loadCorrespondenceBridge();
+
   return NextResponse.json({
-    fakeDemo: process.env.CORRESPONDENCE_FAKE_DEMO === "1",
-    devRoutes: process.env.CORRESPONDENCE_DEV === "1" || process.env.CORRESPONDENCE_FAKE_DEMO === "1",
+    fakeDemo: correspondenceFakeDemoEnabled(),
+    devRoutes: correspondenceDevEnabled(),
   });
 }

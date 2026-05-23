@@ -19,9 +19,8 @@ import {
   buildListingSummary,
   canStartCorrespondence,
   correspondenceFakeDemoEnabled,
-  demoListerPhone,
+  resolveListerPhone,
   startCorrespondence,
-  useDemoListerPhoneFallback,
 } from "./correspondenceService.js";
 
 const AGENT_DIR = path.join(ROOT, "agent");
@@ -161,10 +160,10 @@ const startCorrespondenceTool = defineTool({
       };
     }
 
-    const phone =
-      params.listerPhone ||
-      listing.brokerPhone ||
-      (useDemoListerPhoneFallback() ? demoListerPhone() : "");
+    const phone = resolveListerPhone({
+      explicitPhone: params.listerPhone,
+      brokerPhone: listing.brokerPhone,
+    });
     if (!phone?.trim()) {
       return {
         content: [

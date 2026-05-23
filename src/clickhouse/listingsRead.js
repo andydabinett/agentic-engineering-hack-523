@@ -1,10 +1,24 @@
 import fs from 'fs';
 import { DEFAULT_DB } from '../config/env.js';
+import { getClickHouseConfig } from '../config/clickhouseEnv.js';
 import { getClient } from './client.js';
 import { mapRowToWebListing } from '../bridge/mapListing.js';
 
+function clickhouseConfigured() {
+  try {
+    getClickHouseConfig();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Listings from ClickHouse when SQLite file is absent (serverless / fresh deploy). */
 export async function listListingsFromClickHouse({ borough, source, limit = 200 } = {}) {
+  if (!clickhouseConfigured()) {
+    return [];
+  }
+
   const client = getClient();
   const clauses = ['rent > 0'];
   const params = { limit: Number(limit) };

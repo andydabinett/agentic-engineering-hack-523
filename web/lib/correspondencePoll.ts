@@ -42,7 +42,9 @@ export function applyCorrespondenceView(
   const viewing = correspondenceToViewing(view, listing);
   if (
     viewing &&
-    (view.status === "viewing_confirmed" ||
+    (view.proposedViewingAt ||
+      view.calendarEventId ||
+      view.status === "viewing_confirmed" ||
       view.status === "calendar_event_created" ||
       view.status === "completed")
   ) {

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { isFakeCorrespondenceDemo } from "@/lib/correspondenceConfig";
+import { isCorrespondenceDevMode, isFakeCorrespondenceDemo } from "@/lib/correspondenceConfig";
 import {
   handleCorrespondenceStarted,
   startCorrespondenceForListing,
@@ -26,16 +26,18 @@ export function ReachOutButton({
 }: ReachOutButtonProps) {
   const [loading, setLoading] = useState(false);
   const [fakeDemo, setFakeDemo] = useState(false);
+  const [devMode, setDevMode] = useState(false);
 
   useEffect(() => {
     void isFakeCorrespondenceDemo().then(setFakeDemo);
+    void isCorrespondenceDevMode().then(setDevMode);
   }, []);
 
   if (isDemoMode() || listing.status !== "matched") {
     return null;
   }
 
-  if (!fakeDemo && !listing.brokerPhone?.trim()) {
+  if (!fakeDemo && !devMode && !listing.brokerPhone?.trim()) {
     return null;
   }
 

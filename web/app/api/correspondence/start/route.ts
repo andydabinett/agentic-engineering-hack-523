@@ -22,8 +22,7 @@ export async function POST(request: Request) {
       buildListingSummary,
       canStartCorrespondence,
       correspondenceFakeDemoEnabled,
-      demoListerPhone,
-      useDemoListerPhoneFallback,
+      resolveListerPhone,
     } = await loadCorrespondenceBridge();
 
     if (!canStartCorrespondence()) {
@@ -45,10 +44,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Listing not found" }, { status: 404 });
     }
 
-    const listerPhone =
-      body.listerPhone ||
-      listing.brokerPhone ||
-      (useDemoListerPhoneFallback() ? demoListerPhone() : "");
+    const listerPhone = resolveListerPhone({
+      explicitPhone: body.listerPhone,
+      brokerPhone: listing.brokerPhone,
+    });
 
     if (!listerPhone?.trim()) {
       return NextResponse.json(

@@ -27,6 +27,7 @@
     "dev:stack": "bash scripts/dev-stack.sh",
     "clickhouse:migrate": "node scripts/clickhouse-migrate.js",
     "sync:clickhouse": "node scripts/sync-clickhouse.js",
+    "seed:demo": "node scripts/seed-demo.js",
     "test:clickhouse": "node scripts/test-clickhouse.js",
     "test:zillow": "node scripts/test-zillow-scrape.js",
     "ingest": "node scripts/ingest-boroughs.js",

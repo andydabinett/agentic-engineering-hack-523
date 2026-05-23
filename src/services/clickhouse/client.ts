@@ -55,10 +55,33 @@ export function createClickHouseClient(config: Config): ClickHouseClient {
 }
 
 export class ClickHouseCorrespondenceStore implements CorrespondenceStore {
+  /** In-process cache — ClickHouse ReplacingMergeTree reads can lag behind inserts. */
+  private readonly threadCache = new Map<string, CorrespondenceThread>();
+
   constructor(
     private readonly client: ClickHouseClient,
     private readonly database: string,
   ) {}
+
+  private cacheThread(thread: CorrespondenceThread): CorrespondenceThread {
+    this.threadCache.set(thread.threadId, thread);
+    return thread;
+  }
+
+  private async queryThread(threadId: string): Promise<CorrespondenceThread | null> {
+    const result = await this.client.query({
+      query: `
+        SELECT *
+        FROM ${this.database}.correspondence_threads FINAL
+        WHERE thread_id = {threadId:UUID}
+        LIMIT 1
+      `,
+      query_params: { threadId },
+      format: "JSONEachRow",
+    });
+    const rows = (await result.json()) as Record<string, unknown>[];
+    return rows[0] ? mapThread(rows[0]) : null;
+  }
 
   async createThread(input: CreateThreadInput): Promise<CorrespondenceThread> {
     const now = new Date();
@@ -82,22 +105,15 @@ export class ClickHouseCorrespondenceStore implements CorrespondenceStore {
       values: [row],
       format: "JSONEachRow",
     });
-    return mapThread(row);
+    return this.cacheThread(mapThread(row));
   }
 
   async getThread(threadId: string): Promise<CorrespondenceThread | null> {
-    const result = await this.client.query({
-      query: `
-        SELECT *
-        FROM ${this.database}.correspondence_threads FINAL
-        WHERE thread_id = {threadId:UUID}
-        LIMIT 1
-      `,
-      query_params: { threadId },
-      format: "JSONEachRow",
-    });
-    const rows = (await result.json()) as Record<string, unknown>[];
-    return rows[0] ? mapThread(rows[0]) : null;
+    const cached = this.threadCache.get(threadId);
+    if (cached) return cached;
+    const thread = await this.queryThread(threadId);
+    if (thread) this.threadCache.set(threadId, thread);
+    return thread;
   }
 
   async findActiveThreadByPhone(
@@ -189,7 +205,7 @@ export class ClickHouseCorrespondenceStore implements CorrespondenceStore {
       values: [row],
       format: "JSONEachRow",
     });
-    return mapThread(row);
+    return this.cacheThread(mapThread(row));
   }
 
   async addMessage(
@@ -220,7 +236,7 @@ export class ClickHouseCorrespondenceStore implements CorrespondenceStore {
         SELECT *
         FROM ${this.database}.correspondence_messages
         WHERE thread_id = {threadId:UUID}
-        ORDER BY sent_at ASC
+        ORDER BY sent_at ASC, direction ASC, message_id ASC
       `,
       query_params: { threadId },
       format: "JSONEachRow",

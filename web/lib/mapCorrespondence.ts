@@ -72,14 +72,39 @@ export function correspondenceToConversationStatus(status: string): Conversation
   }
 }
 
+export function sortCorrespondenceMessages(
+  messages: CorrespondenceMessage[],
+): CorrespondenceMessage[] {
+  return messages.slice().sort((a, b) => {
+    const delta = new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime();
+    if (delta !== 0) return delta;
+    if (a.direction === b.direction) {
+      return a.messageId.localeCompare(b.messageId);
+    }
+    return a.direction === "inbound" ? -1 : 1;
+  });
+}
+
 export function mapCorrespondenceMessages(messages: CorrespondenceMessage[]): Message[] {
-  return messages.map((message) => ({
+  return sortCorrespondenceMessages(messages).map((message) => ({
     id: message.messageId,
     from: message.direction === "outbound" ? "agent" : "broker",
     body: message.body,
     timestamp: new Date(message.sentAt),
     receipt: message.direction === "outbound" ? "delivered" : undefined,
   }));
+}
+
+export function mergeUiMessages(existing: Message[], incoming: Message[]): Message[] {
+  const byId = new Map<string, Message>();
+  for (const message of existing) byId.set(message.id, message);
+  for (const message of incoming) byId.set(message.id, message);
+  return [...byId.values()].sort((a, b) => {
+    const delta = a.timestamp.getTime() - b.timestamp.getTime();
+    if (delta !== 0) return delta;
+    if (a.from === b.from) return a.id.localeCompare(b.id);
+    return a.from === "broker" ? -1 : 1;
+  });
 }
 
 export function mapCorrespondenceToConversation(
@@ -89,7 +114,7 @@ export function mapCorrespondenceToConversation(
   const messages = mapCorrespondenceMessages(view.messages);
   const lastUpdated =
     messages.length > 0
-      ? messages[messages.length - 1].timestamp
+      ? new Date(Math.max(...messages.map((m) => m.timestamp.getTime())))
       : new Date(view.updatedAt);
 
   return {

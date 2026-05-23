@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import type { Conversation, Message } from "@/lib/types";
 import { brokerInitials, cn } from "@/lib/utils";
+import { stripHtml } from "@/lib/stripHtml";
 
 interface MessageThreadProps {
   conversation: Conversation;
@@ -114,7 +115,7 @@ export function MessageThread({
                         : "rounded-2xl rounded-bl-md bg-surface-raised text-ink",
                     )}
                   >
-                    <p className="whitespace-pre-wrap break-words">{m.body}</p>
+                    <p className="whitespace-pre-wrap break-words">{stripHtml(m.body)}</p>
                   </div>
                   {isAgent && isLastAgent && (
                     <span suppressHydrationWarning className="mt-1 self-end text-[10.5px] text-ink-faint">

@@ -15,7 +15,7 @@ import {
   Sliders,
 } from "lucide-react";
 import { toast } from "sonner";
-import { triggerIngest } from "@/lib/hydrate";
+import { triggerIngest, refreshListingsInStore, fetchPipelineStats } from "@/lib/hydrate";
 
 const AMENITY_SUGGESTIONS = [
   "dishwasher",
@@ -41,6 +41,7 @@ const DEAL_BREAKER_SUGGESTIONS = [
 export default function CriteriaPage() {
   const criteria = useAppStore((s) => s.criteria);
   const updateCriteria = useAppStore((s) => s.updateCriteria);
+  const markReadyToSearch = useAppStore((s) => s.markReadyToSearch);
 
   const [newAmenity, setNewAmenity] = useState("");
   const [newDealBreaker, setNewDealBreaker] = useState("");
@@ -106,22 +107,43 @@ export default function CriteriaPage() {
 
   const handleStartSearch = async () => {
     setIngesting(true);
-    toast.message("Starting ingest update…", {
-      description: "Triggering fresh listings search with updated criteria.",
+    toast.message("Scanning Craigslist & StreetEasy…", {
+      description: "Nimble search — usually a few seconds in demo mode.",
+      duration: 30_000,
     });
     try {
-      const result = await triggerIngest(criteria as unknown as Record<string, unknown>);
+      const result = await triggerIngest({
+        ...criteria,
+        readyToSearch: true,
+      } as unknown as Record<string, unknown>);
       if (!result.ok) {
-        toast.error("Ingest failed", {
-          description: result.stderr || result.error,
+        toast.error("Scan failed", {
+          description: result.error || result.stderr || "Check NIMBLE_API_KEY and Node 22.",
         });
-      } else {
-        toast.success("Ingest complete", {
-          description: "Fresh listings matched successfully!",
+        return;
+      }
+      markReadyToSearch();
+      const { total, newIds, matches } = await refreshListingsInStore();
+      const stats = await fetchPipelineStats();
+      if (stats) {
+        useAppStore.getState().setStatusCounts({
+          listingsMonitored: stats.listingsMonitored,
+          matches: stats.matches,
+          brokersTexted: useAppStore.getState().conversations.length || stats.brokersTexted,
+          viewingsScheduled: useAppStore.getState().viewings.length || stats.viewingsScheduled,
         });
       }
+      const stored = result.storedTotal ?? 0;
+      toast.success("Scan complete", {
+        description:
+          stored > 0
+            ? `Indexed ${stored} from Nimble — ${newIds.length} new, ${matches} match your criteria (${total} total).`
+            : `${total} listings in feed (${matches} match your criteria).`,
+      });
     } catch {
-      toast.error("Could not reach search ingest API");
+      toast.error("Could not reach ingest API", {
+        description: "Is Next running on Node 22?",
+      });
     } finally {
       setIngesting(false);
     }

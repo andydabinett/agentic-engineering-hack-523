@@ -24,6 +24,7 @@ import type {
   Viewing,
   BookingNotification,
 } from "./types";
+import { mergeUiMessages } from "./mapCorrespondence";
 
 const blankCriteria: SearchCriteria = {
   bedrooms: null,
@@ -104,7 +105,7 @@ export const useAppStore = create<AppState>((set) => ({
     moveInDate: "June 1st, 2026",
     amenities: ["laundry-in-unit", "dishwasher", "pet-friendly", "elevator"],
     dealBreakers: ["no-elevator", "broker-fee"],
-    readyToSearch: true,
+    readyToSearch: false,
   },
   applyCriteriaUpdate: (field, value) =>
     set((state) => {
@@ -200,14 +201,33 @@ export const useAppStore = create<AppState>((set) => ({
       if (c.correspondenceThreadId && !nextIds.includes(c.correspondenceThreadId)) {
         nextIds.push(c.correspondenceThreadId);
       }
+
+      let nextConversation = c;
+      if (idx !== -1) {
+        const mergedMessages = mergeUiMessages(
+          state.conversations[idx].messages,
+          c.messages,
+        );
+        nextConversation = {
+          ...c,
+          messages: mergedMessages,
+          lastUpdated:
+            mergedMessages.length > 0
+              ? new Date(
+                  Math.max(...mergedMessages.map((m) => m.timestamp.getTime())),
+                )
+              : c.lastUpdated,
+        };
+      }
+
       if (idx === -1) {
         return {
-          conversations: [c, ...state.conversations],
+          conversations: [nextConversation, ...state.conversations],
           activeCorrespondenceThreadIds: nextIds,
         };
       }
       const next = state.conversations.slice();
-      next[idx] = c;
+      next[idx] = nextConversation;
       return { conversations: next, activeCorrespondenceThreadIds: nextIds };
     }),
   trackCorrespondenceThread: (threadId) =>

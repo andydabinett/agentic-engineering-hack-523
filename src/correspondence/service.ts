@@ -1,9 +1,22 @@
 import { createAppDeps, type AppDeps } from "../app.ts";
 import { loadConfig } from "../config.ts";
+import { correspondenceFakeDemoEnabled } from "./fakeDemo.js";
 import { normalizePhone } from "../services/sms/phone.ts";
 import type { Config } from "../config.ts";
-import { validateTwilioSignature } from "../services/sms/twilio.ts";
+import {
+  formatTwilioSendError,
+  validateTwilioSignature,
+} from "../services/sms/twilio.ts";
 import { serializeThreadView } from "./serialize.ts";
+
+function ensureOutreachSent(view: ReturnType<typeof serializeThreadView>): void {
+  const hasOutbound = view.messages.some((m) => m.direction === "outbound");
+  if (!hasOutbound && view.status === "initiated") {
+    throw new Error(
+      "Outreach did not send an SMS. Local dev uses the scripted agent by default; set CORRESPONDENCE_USE_PI_AGENT=1 only when OpenRouter is configured for the LLM agent.",
+    );
+  }
+}
 
 let depsPromise: Promise<AppDeps> | null = null;
 
@@ -27,12 +40,18 @@ export async function startCorrespondenceThread(input: {
   }
 
   const { orchestrator } = await getCorrespondenceDeps();
-  const view = await orchestrator.start({
-    ...input,
-    listerPhone,
-    userId: input.userId ?? "web-user",
-  });
-  return serializeThreadView(view);
+  try {
+    const view = await orchestrator.start({
+      ...input,
+      listerPhone,
+      userId: input.userId ?? "web-user",
+    });
+    const serialized = serializeThreadView(view);
+    ensureOutreachSent(serialized);
+    return serialized;
+  } catch (error) {
+    throw new Error(formatTwilioSendError(error));
+  }
 }
 
 export async function getCorrespondenceThreadView(threadId: string) {
@@ -107,9 +126,7 @@ export function correspondenceDevEnabled(): boolean {
   return config.correspondenceDev;
 }
 
-export function correspondenceFakeDemoEnabled(): boolean {
-  return process.env.CORRESPONDENCE_FAKE_DEMO === "1";
-}
+export { correspondenceFakeDemoEnabled } from "./fakeDemo.js";
 
 export function twilioWebhookUrlFromRequest(
   config: Config,

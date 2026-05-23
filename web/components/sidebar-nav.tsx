@@ -25,6 +25,32 @@ const NAV = [
   { href: "/criteria", label: "My Criteria", icon: Sliders },
 ];
 
+function MobileNav({ pathname }: { pathname: string }) {
+  return (
+    <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-rule bg-canvas/95 backdrop-blur-md md:hidden">
+      <ul className="grid grid-cols-4">
+        {NAV.map(({ href, label, icon: Icon }) => {
+          const isActive = pathname === href || pathname.startsWith(href + "/");
+          return (
+            <li key={href}>
+              <Link
+                href={href}
+                className={cn(
+                  "flex flex-col items-center gap-1 px-2 py-2.5 text-[10px]",
+                  isActive ? "text-accent" : "text-ink-muted",
+                )}
+              >
+                <Icon className="h-4 w-4" strokeWidth={1.75} />
+                <span>{label.split(" ")[0]}</span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
+  );
+}
+
 export function SidebarNav() {
   const pathname = usePathname();
   const router = useRouter();
@@ -35,7 +61,8 @@ export function SidebarNav() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <aside className="hidden md:flex h-screen sticky top-0 w-[220px] shrink-0 flex-col border-r border-rule bg-canvas">
+    <>
+    <aside className="sticky top-0 z-30 hidden h-screen w-[220px] shrink-0 flex-col border-r border-rule bg-canvas md:flex">
       {/* Brand */}
       <div className="flex items-center gap-2.5 px-5 pt-6 pb-8">
         <div className="flex h-8 w-8 items-center justify-center rounded-md bg-ink text-canvas">
@@ -191,5 +218,7 @@ export function SidebarNav() {
         </div>
       </div>
     </aside>
+    <MobileNav pathname={pathname} />
+    </>
   );
 }

@@ -31,6 +31,27 @@ export function createTwilioSmsProvider(config: Config): SmsProvider {
   };
 }
 
+export function isTwilioOverloadError(error: unknown): boolean {
+  if (error instanceof Error && "code" in error) {
+    const { code, status } = error as { code?: number; status?: number };
+    if (code === 63038 || status === 429) return true;
+  }
+  return false;
+}
+
+export function formatTwilioSendError(error: unknown): string {
+  if (isTwilioOverloadError(error)) {
+    return "Twilio SMS limit reached. In local dev this should auto-fallback to fake SMS; set CORRESPONDENCE_FAKE_DEMO=1 to skip Twilio entirely.";
+  }
+  if (error instanceof Error && "code" in error) {
+    const code = (error as { code?: number }).code;
+    if (code === 30032) {
+      return "Twilio trial accounts cannot text unverified numbers. Use Twilio Virtual Phone (+18777804236) or verify the recipient in Twilio Console.";
+    }
+  }
+  return error instanceof Error ? error.message : String(error);
+}
+
 export function validateTwilioSignature(
   config: Config,
   signature: string | undefined,

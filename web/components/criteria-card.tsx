@@ -6,7 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { triggerIngest } from "@/lib/hydrate";
+import { triggerIngest, refreshListingsInStore } from "@/lib/hydrate";
 import { useAppStore } from "@/lib/store";
 import { cn, formatPricePerMonth } from "@/lib/utils";
 
@@ -53,14 +53,21 @@ export function CriteriaCard() {
           onClick={async () => {
             setIngesting(true);
             toast.message("Starting ingest…", {
-              description: "Nimble search + SQLite + ClickHouse sync",
+              description: "Nimble search — usually a few seconds in demo mode.",
             });
             try {
               const result = await triggerIngest(criteria as unknown as Record<string, unknown>);
               if (!result.ok) {
                 toast.error("Ingest failed", { description: result.stderr || result.error });
               } else {
-                toast.success("Ingest complete", { description: "Opening dashboard" });
+                const { total, newIds, matches } = await refreshListingsInStore();
+                const stored = result.storedTotal ?? 0;
+                toast.success("Ingest complete", {
+                  description:
+                    stored > 0
+                      ? `Indexed ${stored} from Nimble — ${newIds.length} new, ${matches} match criteria.`
+                      : `${total} listings on dashboard (${matches} match criteria).`,
+                });
               }
             } catch {
               toast.error("Could not reach ingest API");

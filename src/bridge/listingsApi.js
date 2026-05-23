@@ -47,6 +47,32 @@ export function boroughIdsFromCriteria(criteria = {}) {
   const neighborhood = criteria.neighborhood?.toLowerCase() || '';
   if (!neighborhood) return ['all'];
 
+  const neighborhoodBorough = {
+    'east village': 'manhattan',
+    'west village': 'manhattan',
+    'greenwich village': 'manhattan',
+    'soho': 'manhattan',
+    'tribeca': 'manhattan',
+    'chelsea': 'manhattan',
+    'hells kitchen': 'manhattan',
+    "hell's kitchen": 'manhattan',
+    'upper east side': 'manhattan',
+    'upper west side': 'manhattan',
+    'harlem': 'manhattan',
+    'williamsburg': 'brooklyn',
+    'bushwick': 'brooklyn',
+    'park slope': 'brooklyn',
+    'bensonhurst': 'brooklyn',
+    'astoria': 'queens',
+    'long island city': 'queens',
+  };
+
+  for (const [hood, boroughId] of Object.entries(neighborhoodBorough)) {
+    if (neighborhood.includes(hood)) {
+      return [boroughId];
+    }
+  }
+
   for (const [id, meta] of Object.entries(BOROUGHS)) {
     const name = meta.name.toLowerCase();
     const slug = id.replace('_', ' ');
@@ -56,3 +82,5 @@ export function boroughIdsFromCriteria(criteria = {}) {
   }
   return ['all'];
 }
+
+export { sqliteDbExists } from '../clickhouse/listingsRead.js';

@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import Link from "next/link";
 import { Sparkles } from "lucide-react";
 import { listingMatchesCriteria } from "@/lib/matchesCriteria";
 import { useAppStore } from "@/lib/store";
@@ -14,11 +15,24 @@ export default function DashboardPage() {
   const criteria = useAppStore((s) => s.criteria);
   const liveFreshIds = useAppStore((s) => s.freshListingIds);
   const { runDemo, freshListingIds: demoFreshIds } = useDemoMode();
+  const [showAllListings, setShowAllListings] = useState(false);
 
-  const visibleListings = useMemo(
+  const matchedListings = useMemo(
     () => listings.filter((l) => listingMatchesCriteria(l, criteria)),
     [listings, criteria],
   );
+
+  const visibleListings =
+    showAllListings || !criteria.readyToSearch
+      ? listings
+      : matchedListings.length > 0
+        ? matchedListings
+        : listings;
+
+  const filteredOutCount =
+    criteria.readyToSearch && !showAllListings
+      ? listings.length - matchedListings.length
+      : 0;
 
   const freshSet = useMemo(() => {
     const s = new Set(liveFreshIds);
@@ -70,9 +84,45 @@ export default function DashboardPage() {
             ))}
           </ul>
           {visibleListings.length === 0 && (
-            <p className="rounded-xl border border-dashed border-rule bg-surface px-6 py-12 text-center text-[14px] text-ink-muted">
-              No listings yet — set criteria in chat and start a scrape, or wait for the
-              background crawler.
+            <div className="rounded-xl border border-dashed border-rule bg-surface px-6 py-12 text-center">
+              <p className="text-[14px] text-ink-muted">
+                {listings.length === 0
+                  ? "No listings yet — set criteria in chat and run Scan listings now on My Criteria, or wait for the background crawler."
+                  : `No listings match your criteria${criteria.neighborhood ? ` (${criteria.neighborhood}` : ""}${criteria.maxPrice ? `, ≤$${criteria.maxPrice.toLocaleString()}` : ""}${criteria.bedrooms != null ? `, ${criteria.bedrooms === 0 ? "studio" : `${criteria.bedrooms}BR`}` : ""}${criteria.neighborhood || criteria.maxPrice || criteria.bedrooms != null ? ")" : ""}.`}
+              </p>
+              {listings.length > 0 && criteria.readyToSearch && (
+                <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowAllListings(true)}
+                    className="text-[13px] font-medium text-accent hover:underline"
+                  >
+                    Show all {listings.length} listings
+                  </button>
+                  <span className="text-ink-faint">·</span>
+                  <Link href="/criteria" className="text-[13px] text-ink-muted hover:text-ink">
+                    Broaden criteria
+                  </Link>
+                </div>
+              )}
+            </div>
+          )}
+          {filteredOutCount > 0 && visibleListings.length > 0 && (
+            <p className="mt-4 text-center text-[12px] text-ink-faint">
+              Showing {visibleListings.length} of {listings.length} listings
+              {showAllListings ? " (all)" : " that match your criteria"}.
+              {!showAllListings && (
+                <>
+                  {" "}
+                  <button
+                    type="button"
+                    onClick={() => setShowAllListings(true)}
+                    className="text-accent hover:underline"
+                  >
+                    Show all
+                  </button>
+                </>
+              )}
             </p>
           )}
         </section>

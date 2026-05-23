@@ -9,6 +9,7 @@ import { MessageThread } from "@/components/message-thread";
 import { useAppStore } from "@/lib/store";
 import type { Conversation } from "@/lib/types";
 import { brokerInitials, cn } from "@/lib/utils";
+import { stripHtml } from "@/lib/stripHtml";
 
 export default function MessagesPage() {
   return (
@@ -97,7 +98,7 @@ function ThreadRow({
   onClick: () => void;
 }) {
   const last = conversation.messages[conversation.messages.length - 1];
-  const preview = last?.body ?? "—";
+  const preview = last?.body ? stripHtml(last.body) : "—";
   const [timeLabel, setTimeLabel] = useState("");
 
   useEffect(() => {
