@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
+import { requireApiSecret } from "@/lib/server/apiAuth";
 import { loadCorrespondenceBridge, loadListingsApi } from "@/lib/server/repo";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  const unauthorized = requireApiSecret(request);
+  if (unauthorized) return unauthorized;
+
   try {
     const body = await request.json();
     const listingId = body.listingId as string | undefined;
@@ -19,6 +23,7 @@ export async function POST(request: Request) {
       canStartCorrespondence,
       correspondenceFakeDemoEnabled,
       demoListerPhone,
+      useDemoListerPhoneFallback,
     } = await loadCorrespondenceBridge();
 
     if (!canStartCorrespondence()) {
@@ -43,7 +48,7 @@ export async function POST(request: Request) {
     const listerPhone =
       body.listerPhone ||
       listing.brokerPhone ||
-      (correspondenceFakeDemoEnabled() ? demoListerPhone() : "");
+      (useDemoListerPhoneFallback() ? demoListerPhone() : "");
 
     if (!listerPhone?.trim()) {
       return NextResponse.json(

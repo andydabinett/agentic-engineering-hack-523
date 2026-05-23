@@ -37,8 +37,9 @@ Correspondence (parallel):
 | `npm run web:dev` | Next.js UI at http://localhost:3000 |
 | `npm run dev` | Pi coding agent TUI (`agent/`) |
 | `npm run server` | Correspondence Hono server (`src/index.ts`, default port 3001) |
-| `npm run dev:correspondence` | Server + ngrok + auto Twilio webhook sync (sets `CORRESPONDENCE_DEV=1`) |
-| `npm run sync:twilio-webhook` | Point Twilio SMS webhook at current ngrok URL (or `--url`) |
+| `npm run dev:correspondence:ui` | **Dashboard + ngrok on :3000** + Twilio webhook → Next `/api/webhooks/twilio/sms` (full UI → Virtual Phone) |
+| `npm run dev:correspondence` | Hono on :3001 + ngrok + Twilio webhook (CLI / backend scripts) |
+| `npm run sync:twilio-webhook` | Point Twilio SMS webhook at current ngrok URL (`--next` for dashboard) |
 | `npm test` | Correspondence unit tests (vitest) |
 | `npm run demo:correspondence -- +1…` | Start demo thread (Twilio Virtual Phone: `+18777804236`) |
 | `npm run init:clickhouse` | Create correspondence tables (optional; in-memory fallback if unset) |

@@ -39,6 +39,18 @@ In **Variables**, add (same as local `.env`):
 | `CLICKHOUSE_DATABASE` | `default` |
 | `CLICKHOUSE_SECURE` | `true` |
 
+Correspondence (SMS threads — started automatically in Docker/Railway):
+
+| Variable | Required | Notes |
+|----------|----------|-------|
+| `CORRESPONDENCE_ENABLED` | No | `1` (default in Docker) — Hono on internal `:3001` |
+| `CORRESPONDENCE_API_URL` | No | Auto `http://127.0.0.1:3001` in Docker |
+| `CLICKHOUSE_DATABASE` | For threads | Use `javier` **or** run `npm run init:clickhouse` on your DB |
+| `TWILIO_*` | For real SMS | Optional; use `CORRESPONDENCE_FAKE_DEMO=1` for UI-only demo |
+| `CORRESPONDENCE_FAKE_DEMO` | No | `0` in production (default in Docker) |
+| `CORRESPONDENCE_DEV` | No | `0` in production — enables simulate-reply when `1` |
+| `API_SECRET` | Recommended | Protects `POST /api/ingest` and correspondence write routes |
+
 Optional (already set in Docker image):
 
 | Variable | Value |
@@ -57,7 +69,30 @@ Railway builds the Docker image and exposes a public URL like
 
 Check health: `GET /api/health`
 
-### 6. Seed data on first deploy
+Correspondence health (internal): `GET http://127.0.0.1:3001/health` from inside the container.
+
+### 6. ClickHouse correspondence tables (first deploy)
+
+If using database `javier` for SMS threads:
+
+```bash
+npm run init:clickhouse
+```
+
+Listings analytics use `nyc_rent_ledger` in database `default` (`npm run clickhouse:migrate`).
+
+### 7. Twilio webhook (real SMS only)
+
+Point your Twilio number **Messaging** webhook to:
+
+`https://<your-public-domain>/api/webhooks/twilio/sms`
+
+(Next.js proxies to the internal correspondence server on `:3001`.)
+
+For local dev, use `npm run dev:correspondence` + `npm run sync:twilio-webhook`.  
+For fake UI demo (no inbound SMS), set `CORRESPONDENCE_FAKE_DEMO=1` locally — see [DEMO.md](DEMO.md).
+
+### 8. Seed data on first deploy
 
 From your laptop (with `.env` filled in):
 
@@ -121,4 +156,7 @@ Limitations on Vercel:
 | `/api/health` shows `sqlite: missing` on Railway | Attach volume at `/app/data` |
 | ClickHouse errors | Add `CLICKHOUSE_HOST` + `CLICKHOUSE_API_KEY` |
 | Chat 503 | Set `OPENROUTER_API_KEY` |
+| Correspondence / Reach out fails | Check container logs for Hono on `:3001`; verify `CORRESPONDENCE_API_URL` |
+| Threads disappear after restart | Set `CLICKHOUSE_HOST` + `CLICKHOUSE_API_KEY`; run `init:clickhouse` |
+| `401` on ingest / reach out | Set `Authorization: Bearer <API_SECRET>` when `API_SECRET` is configured |
 | Empty dashboard on Vercel | Run `npm run sync:clickhouse` locally after ingest |

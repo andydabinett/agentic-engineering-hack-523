@@ -25,6 +25,17 @@ export function demoListerPhone() {
   return process.env.DEMO_LISTER_PHONE || "+18777804236";
 }
 
+export function correspondenceDevEnabled() {
+  return (
+    process.env.CORRESPONDENCE_DEV === "1" || process.env.CORRESPONDENCE_FAKE_DEMO === "1"
+  );
+}
+
+/** Use Virtual Phone / demo lister when fake demo or local dev outreach. */
+export function useDemoListerPhoneFallback() {
+  return correspondenceFakeDemoEnabled() || correspondenceDevEnabled();
+}
+
 export function canStartCorrespondence() {
   return twilioConfiguredForCorrespondence() || correspondenceFakeDemoEnabled();
 }

@@ -25,9 +25,15 @@ describe("ngrok tunnel helpers", () => {
 });
 
 describe("Twilio webhook URL builder", () => {
-  it("builds sms webhook path", () => {
+  it("builds Hono sms webhook path by default", () => {
     expect(twilioSmsWebhookUrl("https://abc.ngrok-free.app/")).toBe(
       "https://abc.ngrok-free.app/webhooks/twilio/sms",
     );
+  });
+
+  it("builds Next sms webhook path when requested", () => {
+    expect(
+      twilioSmsWebhookUrl("https://abc.ngrok-free.app/", "/api/webhooks/twilio/sms"),
+    ).toBe("https://abc.ngrok-free.app/api/webhooks/twilio/sms");
   });
 });

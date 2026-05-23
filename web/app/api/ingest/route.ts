@@ -1,6 +1,7 @@
 import { spawn } from "child_process";
 import path from "path";
 import { NextResponse } from "next/server";
+import { requireApiSecret } from "@/lib/server/apiAuth";
 import { loadListingsApi, REPO_ROOT } from "@/lib/server/repo";
 
 export const runtime = "nodejs";
@@ -28,6 +29,9 @@ function runIngest(args: string[]) {
 }
 
 export async function POST(request: Request) {
+  const unauthorized = requireApiSecret(request);
+  if (unauthorized) return unauthorized;
+
   let body: { boroughs?: string[]; maxResults?: number; criteria?: Record<string, unknown> } = {};
   try {
     body = await request.json();

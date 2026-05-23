@@ -34,6 +34,11 @@ interface ChatPanelProps {
 }
 
 export function ChatPanel({ variant = "page" }: ChatPanelProps) {
+  const chatSessionIdRef = useRef(
+    typeof crypto !== "undefined" && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `chat-${Date.now()}`,
+  );
   const criteria = useAppStore((s) => s.criteria);
   const applyCriteriaUpdate = useAppStore((s) => s.applyCriteriaUpdate);
   const markReadyToSearch = useAppStore((s) => s.markReadyToSearch);
@@ -43,7 +48,7 @@ export function ChatPanel({ variant = "page" }: ChatPanelProps) {
   const { messages, sendMessage, status } = useChat({
     messages: [SEED_MESSAGE],
     // @ts-ignore
-    body: { criteria },
+    body: { criteria, chatSessionId: chatSessionIdRef.current },
     onData: (part) => {
       // Custom data parts: data-update-criteria / data-ready-to-search
       if (part.type === "data-update-criteria") {
