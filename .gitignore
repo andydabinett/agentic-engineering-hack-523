@@ -1,11 +1,45 @@
+# Environment
 .env
+.env.*
+!.env.example
+
+# Dependencies
 node_modules/
-.venv/
-venv/
 __pycache__/
 *.py[cod]
+*.pyc
+*.pyo
 .pytest_cache/
 .mypy_cache/
+.venv/
+venv/
+
+# Data (local SQLite + samples)
 data/*.json
 data/listings.db
 !data/.gitkeep
+
+# Build output
+dist/
+build/
+*.egg-info/
+web/.next/
+web/out/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Agent runtime
+agent/sessions/
+agent/bin/

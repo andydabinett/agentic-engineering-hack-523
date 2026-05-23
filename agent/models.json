@@ -1,0 +1,17 @@
+{
+  "providers": {
+    "manual": {
+      "baseUrl": "https://openrouter.ai/api/v1",
+      "apiKey": "OPENROUTER_API_KEY",
+      "api": "openai-completions",
+      "models": [
+        {
+          "id": "anthropic/claude-sonnet-4-5",
+          "name": "Claude Sonnet 4.5",
+          "cost": { "input": 3, "output": 15, "cacheRead": 0.3, "cacheWrite": 3.75 },
+          "contextWindow": 200000
+        }
+      ]
+    }
+  }
+}
