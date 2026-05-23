@@ -1,0 +1,250 @@
+#!/usr/bin/env node
+import { ListingRepository } from '../src/listings/repository.js';
+import { DEFAULT_DB } from '../src/config/env.js';
+
+const PHOTOS = [
+  "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1600&q=80",
+  "https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&w=1600&q=80",
+  "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1600&q=80",
+  "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1600&q=80",
+  "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=1600&q=80",
+  "https://images.unsplash.com/photo-1502005229762-cf1b2da7c5d6?auto=format&fit=crop&w=1600&q=80",
+];
+
+function photos(start, count = 5) {
+  return Array.from({ length: count }, (_, i) => PHOTOS[(start + i) % PHOTOS.length]);
+}
+
+const mockListings = [
+  {
+    id: "listing-1",
+    address: "234 E 10th St #4B",
+    neighborhood: "East Village",
+    pricePerMonth: 3650,
+    beds: 1,
+    baths: 1,
+    sqftApprox: 620,
+    photos: photos(0, 5),
+    brokerName: "Jamie Carter",
+    brokerPhone: "(917) 555-0142",
+    status: "scheduled",
+    amenities: ["dishwasher", "laundry-in-building", "pet-friendly", "exposed brick"],
+    noBrokerFee: true,
+    description: "South-facing one-bedroom on a quiet block between 2nd and 3rd Ave. Original hardwood, exposed brick along the living room wall, and a recently renovated kitchen with full-size appliances. Building is rent-stabilized.",
+  },
+  {
+    id: "listing-2",
+    address: "511 E 7th St #2C",
+    neighborhood: "East Village",
+    pricePerMonth: 3950,
+    beds: 1,
+    baths: 1,
+    sqftApprox: 700,
+    photos: photos(1, 5),
+    brokerName: "Priya Aggarwal",
+    brokerPhone: "(646) 555-0917",
+    status: "scheduled",
+    amenities: ["elevator", "laundry-in-building", "dishwasher", "pet-friendly"],
+    noBrokerFee: true,
+    description: "Spacious 1BR in a well-kept walk-up between Ave A and Ave B. Renovated bathroom, generous closets, and oversized windows. A short walk to Tompkins Square Park.",
+  },
+  {
+    id: "listing-3",
+    address: "17 St Marks Pl #3R",
+    neighborhood: "East Village",
+    pricePerMonth: 4200,
+    beds: 1,
+    baths: 1,
+    sqftApprox: 740,
+    photos: photos(2, 5),
+    brokerName: "Daniel Okafor",
+    brokerPhone: "(212) 555-0488",
+    status: "scheduled",
+    amenities: ["dishwasher", "laundry-in-unit", "pet-friendly", "exposed brick"],
+    noBrokerFee: false,
+    description: "Rear-facing 1BR above the famous St Marks Place strip. Surprisingly quiet given the location, with a roomy galley kitchen and in-unit washer/dryer.",
+  },
+  {
+    id: "listing-4",
+    address: "122 Ave A #3R",
+    neighborhood: "East Village",
+    pricePerMonth: 3450,
+    beds: 1,
+    baths: 1,
+    sqftApprox: 580,
+    photos: photos(3, 5),
+    brokerName: "Lena Goldfarb",
+    brokerPhone: "(917) 555-0231",
+    status: "complete",
+    amenities: ["dishwasher", "laundry-in-building", "elevator"],
+    noBrokerFee: true,
+    description: "Compact but bright 1BR a block from Tompkins Square. Good closet space, decent natural light, somewhat dated bathroom fittings.",
+  },
+  {
+    id: "listing-5",
+    address: "88 Stuyvesant St #5",
+    neighborhood: "East Village",
+    pricePerMonth: 4350,
+    beds: 1,
+    baths: 1,
+    sqftApprox: 760,
+    photos: photos(4, 5),
+    brokerName: "Marcus Reyes",
+    brokerPhone: "(646) 555-0364",
+    status: "awaiting",
+    amenities: ["dishwasher", "laundry-in-unit", "exposed brick", "high ceilings"],
+    noBrokerFee: false,
+    description: "Unusual angled layout on a one-block street between 2nd and 3rd Ave. High ceilings, a working fireplace, and beautifully restored hardwood throughout.",
+  },
+  {
+    id: "listing-6",
+    address: "345 E 4th St #1A",
+    neighborhood: "East Village",
+    pricePerMonth: 3200,
+    beds: 0,
+    baths: 1,
+    sqftApprox: 450,
+    photos: photos(5, 4),
+    brokerName: "Mei Chen",
+    brokerPhone: "(212) 555-0789",
+    status: "awaiting",
+    amenities: ["dishwasher", "laundry-in-building", "pet-friendly"],
+    noBrokerFee: true,
+    description: "Garden-level studio with a private outdoor area off the back. The layout makes the most of the square footage with a defined sleeping nook.",
+  },
+  {
+    id: "listing-7",
+    address: "67 1st Ave #4F",
+    neighborhood: "East Village",
+    pricePerMonth: 3800,
+    beds: 1,
+    baths: 1,
+    sqftApprox: 660,
+    photos: photos(0, 4),
+    brokerName: "Sebastian Park",
+    brokerPhone: "(917) 555-0125",
+    status: "contacted",
+    amenities: ["dishwasher", "elevator", "doorman"],
+    noBrokerFee: false,
+    description: "Doorman building rare for the neighborhood. Compact 1BR with a south-facing exposure and brand-new kitchen.",
+  },
+  {
+    id: "listing-8",
+    address: "432 Ave B #2W",
+    neighborhood: "East Village",
+    pricePerMonth: 3100,
+    beds: 0,
+    baths: 1,
+    sqftApprox: 420,
+    photos: photos(2, 4),
+    brokerName: "Hannah Berger",
+    brokerPhone: "(646) 555-0541",
+    status: "contacted",
+    amenities: ["laundry-in-building", "pet-friendly", "exposed brick"],
+    noBrokerFee: true,
+    description: "Loft-feeling studio with double-height ceilings in one section. Tucked above a small bookstore on a quieter stretch of Ave B.",
+  },
+  {
+    id: "listing-9",
+    address: "12 Cooper Sq #6E",
+    neighborhood: "East Village",
+    pricePerMonth: 4500,
+    beds: 1,
+    baths: 1,
+    sqftApprox: 820,
+    photos: photos(4, 5),
+    brokerName: "Ravi Kapoor",
+    brokerPhone: "(917) 555-0903",
+    status: "contacted",
+    amenities: ["dishwasher", "laundry-in-unit", "elevator", "gym", "roof-deck"],
+    noBrokerFee: false,
+    description: "Top-floor 1BR in a modern building with sweeping views toward the Bowery. Floor-to-ceiling windows, central air, and access to the building's roof deck.",
+  },
+  {
+    id: "listing-10",
+    address: "209 E 7th St #3A",
+    neighborhood: "East Village",
+    pricePerMonth: 3550,
+    beds: 1,
+    baths: 1,
+    sqftApprox: 610,
+    photos: photos(1, 4),
+    brokerName: "Tomás Beltran",
+    brokerPhone: "(646) 555-0274",
+    status: "matched",
+    amenities: ["dishwasher", "laundry-in-building", "pet-friendly"],
+    noBrokerFee: true,
+    description: "Just-listed 1BR between Ave A and 1st Ave. Renovated last year, pre-war details intact, washer/dryer on the floor.",
+  },
+  {
+    id: "listing-11",
+    address: "78 1st Ave #5C",
+    neighborhood: "East Village",
+    pricePerMonth: 3725,
+    beds: 1,
+    baths: 1,
+    sqftApprox: 640,
+    photos: photos(3, 4),
+    brokerName: "Olivia Sharma",
+    brokerPhone: "(212) 555-0610",
+    status: "matched",
+    amenities: ["elevator", "dishwasher", "laundry-in-building"],
+    noBrokerFee: false,
+    description: "Bright corner 1BR with eastern and southern exposures. Newer building with elevator and shared laundry on every floor.",
+  },
+  {
+    id: "listing-12",
+    address: "414 E 10th St #2F",
+    neighborhood: "East Village",
+    pricePerMonth: 4100,
+    beds: 1,
+    baths: 1,
+    sqftApprox: 680,
+    photos: photos(5, 4),
+    brokerName: "Andrei Mikhailov",
+    brokerPhone: "(917) 555-0488",
+    status: "matched",
+    amenities: ["dishwasher", "laundry-in-unit", "exposed brick"],
+    noBrokerFee: true,
+    description: "Renovated 1BR with in-unit laundry, dishwasher, and a deep walk-in closet. Quiet rear-facing unit.",
+  },
+];
+
+async function main() {
+  console.log(`Opening SQLite database at: ${DEFAULT_DB}`);
+  const repo = new ListingRepository(DEFAULT_DB);
+
+  try {
+    let seeded = 0;
+    for (const listing of mockListings) {
+      const record = {
+        source: "streeteasy",
+        borough: "manhattan",
+        url: `https://streeteasy.com/rental/${listing.id}`,
+        listingLink: `https://streeteasy.com/rental/${listing.id}`,
+        title: listing.address,
+        snippet: listing.description,
+        rentHint: `$${listing.pricePerMonth}`,
+        bedrooms: String(listing.beds),
+        bathrooms: String(listing.baths),
+        agentName: listing.brokerName,
+        agencyName: "Seeded Agency",
+        agentEmail: `${listing.brokerName.toLowerCase().replace(" ", "")}@seeded.com`,
+        agentPhone: listing.brokerPhone,
+        photos: listing.photos,
+        status: listing.status,
+      };
+
+      repo.upsertListing(record);
+      seeded += 1;
+    }
+    console.log(`Successfully seeded ${seeded} listings!`);
+  } finally {
+    repo.close();
+  }
+}
+
+main().catch((err) => {
+  console.error("Seeding failed:", err);
+  process.exit(1);
+});

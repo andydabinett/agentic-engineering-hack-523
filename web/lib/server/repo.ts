@@ -8,9 +8,11 @@ export const REPO_ROOT = path.resolve(webRoot, "../../..");
 /** Next.js runs from web/ — load repo root .env so API routes see the same keys as CLI. */
 loadEnv({ path: path.join(REPO_ROOT, ".env") });
 
+const nativeImport = new Function("specifier", "return import(specifier)");
+
 function repoImport(rel: string) {
   const abs = path.join(REPO_ROOT, rel);
-  return import(pathToFileURL(abs).href);
+  return nativeImport(pathToFileURL(abs).href);
 }
 
 /** Dynamic import of root ESM modules (SQLite ingest pipeline). */

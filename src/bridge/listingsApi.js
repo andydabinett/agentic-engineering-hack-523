@@ -1,6 +1,7 @@
 import { ListingRepository } from '../listings/repository.js';
 import { BOROUGHS } from '../listings/boroughs.js';
 import { listListingsFromClickHouse, sqliteDbExists } from '../clickhouse/listingsRead.js';
+export { sqliteDbExists };
 import { mapRowToWebListing, mapRowsToWebListings } from './mapListing.js';
 import { buildPipelineStats } from './pipelineStats.js';
 
