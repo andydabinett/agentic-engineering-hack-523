@@ -1,30 +1,7 @@
 import { Hono } from "hono";
 
 import type { AppDeps } from "../app.ts";
-
-function serializeThreadView(view: Awaited<ReturnType<AppDeps["orchestrator"]["getThreadView"]>>) {
-  return {
-    threadId: view.thread.threadId,
-    listingId: view.thread.listingId,
-    listerPhone: view.thread.listerPhone,
-    listerName: view.thread.listerName,
-    userId: view.thread.userId,
-    status: view.thread.status,
-    proposedViewingAt: view.thread.proposedViewingAt,
-    calendarEventId: view.thread.calendarEventId,
-    listingSummary: view.thread.listingSummary,
-    errorMessage: view.thread.errorMessage,
-    createdAt: view.thread.createdAt,
-    updatedAt: view.thread.updatedAt,
-    messages: view.messages.map((message) => ({
-      messageId: message.messageId,
-      direction: message.direction,
-      body: message.body,
-      sentAt: message.sentAt,
-      twilioSid: message.twilioSid,
-    })),
-  };
-}
+import { serializeThreadView } from "../correspondence/serialize.ts";
 
 export function createCorrespondenceRoutes(deps: AppDeps) {
   const app = new Hono();

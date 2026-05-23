@@ -5,6 +5,7 @@
 
 import fs from "fs/promises";
 import path from "path";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { Type } from "typebox";
 import {
   createAgentSession,
@@ -20,16 +21,16 @@ import {
   correspondenceFakeDemoEnabled,
   demoListerPhone,
   startCorrespondence,
-  twilioConfiguredForCorrespondence,
-} from "./correspondenceClient.js";
+} from "./correspondenceService.js";
 
 const AGENT_DIR = path.join(ROOT, "agent");
+const chatContext = new AsyncLocalStorage();
 
 /** Criteria from the latest chat request (for borough-aware scrapes). */
 let latestSearchCriteria = null;
 
-/** Emitted to the web UI after a successful start_correspondence tool run. */
-let lastCorrespondenceStart = null;
+/** Per-tab correspondence start payloads for the web UI stream. */
+const lastCorrespondenceStarts = new Map();
 
 const updateCriteriaTool = defineTool({
   name: "update_criteria",
@@ -195,7 +196,8 @@ const startCorrespondenceTool = defineTool({
         address: listing.address,
         messages: view.messages,
       };
-      lastCorrespondenceStart = details;
+      const chatSessionId = chatContext.getStore()?.chatSessionId ?? "default";
+      lastCorrespondenceStarts.set(chatSessionId, details);
 
       return {
         content: [
@@ -233,8 +235,28 @@ You are helping a tenant define apartment search criteria in a short conversatio
 - Do not mention tool names to the user; just chat naturally.
 `.trim();
 
-/** @type {{ session: import("@mariozechner/pi-coding-agent").AgentSession | null, userTurns: number }} */
-const state = { session: null, userTurns: 0 };
+/** @type {Map<string, { session: import("@mariozechner/pi-coding-agent").AgentSession | null, userTurns: number }>} */
+const chatSessions = new Map();
+
+async function getSessionForTurn(chatSessionId, userTurns) {
+  if (userTurns <= 0) {
+    throw new Error("No user message in request");
+  }
+
+  let entry = chatSessions.get(chatSessionId);
+  if (userTurns === 1 || userTurns < (entry?.userTurns ?? 0)) {
+    entry?.session?.dispose?.();
+    entry = { session: await createChatSession(), userTurns: 0 };
+    chatSessions.set(chatSessionId, entry);
+  }
+
+  if (!entry?.session) {
+    entry = { session: await createChatSession(), userTurns: 0 };
+    chatSessions.set(chatSessionId, entry);
+  }
+
+  return entry.session;
+}
 
 async function loadSystemPrompt() {
   const systemPath = path.join(AGENT_DIR, "SYSTEM.md");
@@ -303,21 +325,6 @@ function countUserTurns(messages) {
   return (messages ?? []).filter((m) => m?.role === "user").length;
 }
 
-async function getSessionForTurn(userTurns) {
-  if (userTurns <= 0) {
-    throw new Error("No user message in request");
-  }
-  if (userTurns === 1 || userTurns < state.userTurns) {
-    state.session?.dispose?.();
-    state.session = await createChatSession();
-    state.userTurns = 0;
-  }
-  if (!state.session) {
-    state.session = await createChatSession();
-  }
-  return state.session;
-}
-
 const encoder = new TextEncoder();
 
 /**
@@ -354,74 +361,82 @@ export async function handleChatRequest(req) {
     );
   }
 
-  let session;
-  try {
-    session = await getSessionForTurn(userTurns);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return new Response(JSON.stringify({ error: message }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
+  const chatSessionId =
+    typeof body.chatSessionId === "string" && body.chatSessionId.trim()
+      ? body.chatSessionId.trim()
+      : "default";
 
-  const messageId = `pi-${Date.now()}`;
-  const textId = `pi-txt-${Date.now()}`;
-  let textStarted = false;
-  let agentDone = false;
-
-  const stream = new ReadableStream({
-    async start(controller) {
-      const send = (obj) => {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
-      };
-
-      const unsubscribe = session.subscribe((event) => {
-        if (event.type === "message_update") {
-          const inner = event.assistantMessageEvent;
-          if (inner.type === "text_delta" && inner.delta) {
-            if (!textStarted) {
-              send({ type: "text-start", id: textId });
-              textStarted = true;
-            }
-            send({ type: "text-delta", id: textId, delta: inner.delta });
-          }
-        }
-
-        if (event.type === "tool_execution_start") {
-          const { toolName, toolCallId, args } = event;
-          if (
-            toolName === "update_criteria" ||
-            toolName === "ready_to_search" ||
-            toolName === "scrape_listings" ||
-            toolName === "start_correspondence"
-          ) {
-            send({
-              type: "tool-input-available",
-              toolCallId,
-              toolName,
-              input: args ?? {},
-            });
-          }
-        }
-
-        if (event.type === "agent_end") {
-          agentDone = true;
-        }
+  return chatContext.run({ chatSessionId }, async () => {
+    let session;
+    try {
+      session = await getSessionForTurn(chatSessionId, userTurns);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return new Response(JSON.stringify({ error: message }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
       });
+    }
+
+    const messageId = `pi-${Date.now()}`;
+    const textId = `pi-txt-${Date.now()}`;
+    let textStarted = false;
+    let agentDone = false;
+
+    const stream = new ReadableStream({
+      async start(controller) {
+        const send = (obj) => {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
+        };
+
+        const unsubscribe = session.subscribe((event) => {
+          if (event.type === "message_update") {
+            const inner = event.assistantMessageEvent;
+            if (inner.type === "text_delta" && inner.delta) {
+              if (!textStarted) {
+                send({ type: "text-start", id: textId });
+                textStarted = true;
+              }
+              send({ type: "text-delta", id: textId, delta: inner.delta });
+            }
+          }
+
+          if (event.type === "tool_execution_start") {
+            const { toolName, toolCallId, args } = event;
+            if (
+              toolName === "update_criteria" ||
+              toolName === "ready_to_search" ||
+              toolName === "scrape_listings" ||
+              toolName === "start_correspondence"
+            ) {
+              send({
+                type: "tool-input-available",
+                toolCallId,
+                toolName,
+                input: args ?? {},
+              });
+            }
+          }
+
+          if (event.type === "agent_end") {
+            agentDone = true;
+          }
+        });
 
       try {
         send({ type: "start", messageId });
 
         await session.prompt(promptText);
-        state.userTurns = userTurns;
+        const entry = chatSessions.get(chatSessionId);
+        if (entry) entry.userTurns = userTurns;
 
-        if (lastCorrespondenceStart?.ok) {
+        const correspondenceStart = lastCorrespondenceStarts.get(chatSessionId);
+        if (correspondenceStart?.ok) {
           send({
             type: "data-correspondence-started",
-            data: lastCorrespondenceStart,
+            data: correspondenceStart,
           });
-          lastCorrespondenceStart = null;
+          lastCorrespondenceStarts.delete(chatSessionId);
         }
 
         if (textStarted) {
@@ -443,13 +458,14 @@ export async function handleChatRequest(req) {
     },
   });
 
-  return new Response(stream, {
-    status: 200,
-    headers: {
-      "Content-Type": "text/event-stream; charset=utf-8",
-      "Cache-Control": "no-cache, no-transform",
-      Connection: "keep-alive",
-      "x-vercel-ai-ui-message-stream": "v1",
-    },
+    return new Response(stream, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/event-stream; charset=utf-8",
+        "Cache-Control": "no-cache, no-transform",
+        Connection: "keep-alive",
+        "x-vercel-ai-ui-message-stream": "v1",
+      },
+    });
   });
 }

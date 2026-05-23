@@ -90,22 +90,22 @@ Default recommendation for Phase 3: **co-process in Docker first** (fast), then 
 
 ### Option A — Co-process (recommended first)
 
-- [ ] Hono stays as separate process inside same container.
-- [ ] Keep `correspondenceClient.js` HTTP client for now.
-- [ ] Health: document internal `:3001` vs public Next `:3000`.
+- [x] Hono stays as separate process inside same container.
+- [x] Keep `correspondenceClient.js` HTTP client for scripts / standalone Hono dev.
+- [x] Health: document internal `:3001` vs public Next `:3000`.
 
 **Pros:** ~1 hour, low risk. **Cons:** still two processes.
 
 ### Option B — Unify into Next (recommended follow-up)
 
-- [ ] Extract shared factory: `createCorrespondenceHandler()` from `src/app.ts`.
-- [ ] Next routes call orchestrator directly (no HTTP):
+- [x] Extract shared factory: `src/correspondence/service.ts` from `src/app.ts`.
+- [x] Next routes call orchestrator directly (no HTTP):
   - `web/app/api/correspondence/*`
-  - new `web/app/api/webhooks/twilio/sms/route.ts`
-- [ ] Keep `src/index.ts` as thin dev-only entry OR delete after parity.
-- [ ] Remove `correspondenceClient.js` from server-side call paths; keep for scripts if needed.
+  - `web/app/api/webhooks/twilio/sms/route.ts`
+- [x] Keep `src/index.ts` as thin dev-only entry for ngrok / Google OAuth.
+- [x] Remove `correspondenceClient.js` from server-side call paths; keep for scripts.
 
-**Pros:** one process, simpler deploy, Twilio → public Next URL. **Cons:** ~半 day refactor; watch Vercel serverless limits for webhooks.
+**Pros:** one process for correspondence in Next, simpler deploy, Twilio → public Next URL. **Cons:** co-process Hono still runs in prod for OAuth until removed.
 
 **Decision gate:** after Phase 1 ships, run fake demo + one real Twilio test on Railway. If stable with co-process, Option B can wait until post-hackathon.
 
@@ -115,8 +115,8 @@ Default recommendation for Phase 3: **co-process in Docker first** (fast), then 
 
 ### 4.1 Chat session isolation
 
-- [ ] Replace module-level `state` in `chatAgent.js` with per-session map keyed by cookie or client id.
-- [ ] Or create fresh session per request (simplest; loses multi-turn within single connection unless keyed).
+- [x] Replace module-level `state` in `chatAgent.js` with per-session map keyed by client `chatSessionId`.
+- [x] `ChatPanel` sends stable `chatSessionId` per tab.
 
 **Done when:** two concurrent chat tabs do not share agent state.
 
@@ -133,7 +133,7 @@ Default recommendation for Phase 3: **co-process in Docker first** (fast), then 
 ## Phase 5 — Cleanup & debt (post-demo)
 
 - [ ] Unify ClickHouse migrations (`clickhouse-migrate.js` + `init_clickhouse.ts`) under one command.
-- [ ] Rename `dev:stack` → runs web + optional fake correspondence, or document clearly.
+- [x] `dev:stack` runs fake correspondence server + web (`scripts/dev-stack.sh`).
 - [ ] Wire or remove `NotificationService` stub.
 - [ ] Encrypt Google refresh tokens at rest.
 - [ ] Consolidate dotenv versions (root vs web).

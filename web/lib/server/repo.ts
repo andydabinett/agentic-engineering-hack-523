@@ -32,5 +32,5 @@ export function loadAgentScrape() {
 }
 
 export function loadCorrespondenceBridge() {
-  return repoImport("src/bridge/correspondenceClient.js");
+  return repoImport("src/bridge/correspondenceService.js");
 }
