@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireApiSecret } from "@/lib/server/apiAuth";
 import { loadCorrespondenceBridge } from "@/lib/server/repo";
 
 export const runtime = "nodejs";
@@ -7,6 +8,9 @@ export async function POST(
   request: Request,
   { params }: { params: { threadId: string } },
 ) {
+  const unauthorized = requireApiSecret(request);
+  if (unauthorized) return unauthorized;
+
   if (
     process.env.CORRESPONDENCE_DEV !== "1" &&
     process.env.CORRESPONDENCE_FAKE_DEMO !== "1"

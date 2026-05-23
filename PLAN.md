@@ -30,29 +30,29 @@ Default recommendation for Phase 3: **co-process in Docker first** (fast), then 
 
 ### 1.1 ClickHouse config for correspondence
 
-- [ ] Update `src/config.ts` to accept `CLICKHOUSE_API_KEY` (and `CLICKHOUSE_URL`) like `src/config/clickhouseEnv.js`.
-- [ ] Align default `CLICKHOUSE_DATABASE` with deploy docs (`default` or document `javier` explicitly).
-- [ ] Add test: `clickhouseConfigured()` true when only `CLICKHOUSE_API_KEY` is set.
+- [x] Update `src/config.ts` to accept `CLICKHOUSE_API_KEY` (and `CLICKHOUSE_URL`) like `src/config/clickhouseEnv.js`.
+- [x] Align default `CLICKHOUSE_DATABASE` with deploy docs (`default` or document `javier` explicitly).
+- [x] Add test: `clickhouseConfigured()` true when only `CLICKHOUSE_API_KEY` is set.
 
 **Done when:** correspondence server uses real ClickHouse when Railway env matches `DEPLOY.md`.
 
 ### 1.2 Start correspondence in production
 
-- [ ] Update `scripts/start-production.sh` to start Hono on internal port (e.g. `3001`) before Next.
-- [ ] Set `CORRESPONDENCE_API_URL=http://127.0.0.1:3001` in Dockerfile or start script.
-- [ ] Ensure Hono gets SIGTERM on container shutdown (trap + kill).
+- [x] Update `scripts/start-production.sh` to start Hono on internal port (e.g. `3001`) before Next.
+- [x] Set `CORRESPONDENCE_API_URL=http://127.0.0.1:3001` in Dockerfile or start script.
+- [x] Ensure Hono gets SIGTERM on container shutdown (trap + kill).
 
 **Done when:** single Railway deploy serves dashboard **and** `GET /health` on `:3001` (or proxied) responds; `POST /api/correspondence/start` succeeds without a second manual service.
 
 ### 1.3 Deploy docs
 
-- [ ] Extend `DEPLOY.md` with correspondence env table:
+- [x] Extend `DEPLOY.md` with correspondence env table:
   - `CORRESPONDENCE_API_URL`
   - `TWILIO_*` (optional if fake demo)
   - `CORRESPONDENCE_FAKE_DEMO` / `CORRESPONDENCE_DEV`
   - `npm run init:clickhouse` for correspondence tables
-- [ ] Document Twilio webhook URL: `{PUBLIC_URL}/webhooks/twilio/sms` (or Next proxy path if unified later).
-- [ ] Note: fake demo needs no Twilio inbound.
+- [x] Document Twilio webhook URL: `{PUBLIC_URL}/webhooks/twilio/sms` (or Next proxy path if unified later).
+- [x] Note: fake demo needs no Twilio inbound.
 
 **Done when:** a new teammate can deploy correspondence from docs alone.
 
@@ -62,25 +62,25 @@ Default recommendation for Phase 3: **co-process in Docker first** (fast), then 
 
 ### 2.1 API guard (minimal auth)
 
-- [ ] Add optional `API_SECRET` env var.
-- [ ] Require `Authorization: Bearer <API_SECRET>` (or `x-api-key`) on:
+- [x] Add optional `API_SECRET` env var.
+- [x] Require `Authorization: Bearer <API_SECRET>` (or `x-api-key`) on:
   - `POST /api/ingest`
   - `POST /api/correspondence/start`
   - `POST /api/correspondence/*/simulate-reply`
-- [ ] Skip check when `API_SECRET` unset (local dev).
+- [x] Skip check when `API_SECRET` unset (local dev).
 
 **Done when:** production can lock down write endpoints with one env var.
 
 ### 2.2 Dev route safety
 
-- [ ] Ensure `CORRESPONDENCE_FAKE_DEMO` and `CORRESPONDENCE_DEV` default off in production Dockerfile.
-- [ ] Log warning at startup if dev routes enabled with `NODE_ENV=production`.
+- [x] Ensure `CORRESPONDENCE_FAKE_DEMO` and `CORRESPONDENCE_DEV` default off in production Dockerfile.
+- [x] Log warning at startup if dev routes enabled with `NODE_ENV=production`.
 
 **Done when:** misconfigured prod cannot expose `simulate-reply` silently.
 
 ### 2.3 CI
 
-- [ ] Add `.github/workflows/test.yml`: `npm ci` + `npm test` on PR/push to `main`.
+- [x] Add `.github/workflows/test.yml`: `npm ci` + `npm test` on PR/push to `main`.
 
 **Done when:** PR #8+ cannot merge with broken tests (optional: branch protection).
 

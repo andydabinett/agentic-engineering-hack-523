@@ -1,3 +1,5 @@
+import { resolveClickHouseSettings } from "./config/resolveClickhouse.ts";
+
 export interface Config {
   port: number;
   publicBaseUrl: string;
@@ -23,6 +25,8 @@ function env(name: string, fallback?: string): string | undefined {
 }
 
 export function loadConfig(): Config {
+  const clickhouse = resolveClickHouseSettings({ defaultDatabase: "javier" });
+
   return {
     port: Number(env("PORT", "3001")),
     publicBaseUrl: env("PUBLIC_BASE_URL", "http://localhost:3001")!,
@@ -33,12 +37,12 @@ export function loadConfig(): Config {
     twilioAccountSid: env("TWILIO_ACCOUNT_SID"),
     twilioAuthToken: env("TWILIO_AUTH_TOKEN"),
     twilioPhoneNumber: env("TWILIO_PHONE_NUMBER"),
-    clickhouseHost: env("CLICKHOUSE_HOST"),
-    clickhousePort: Number(env("CLICKHOUSE_PORT", "8443")),
-    clickhouseUser: env("CLICKHOUSE_USER", "default")!,
-    clickhousePassword: env("CLICKHOUSE_PASSWORD"),
-    clickhouseDatabase: env("CLICKHOUSE_DATABASE", "javier")!,
-    clickhouseSecure: env("CLICKHOUSE_SECURE", "true") === "true",
+    clickhouseHost: clickhouse.host,
+    clickhousePort: clickhouse.port,
+    clickhouseUser: clickhouse.user,
+    clickhousePassword: clickhouse.password,
+    clickhouseDatabase: clickhouse.database,
+    clickhouseSecure: clickhouse.secure,
     googleClientId: env("GOOGLE_CLIENT_ID"),
     googleClientSecret: env("GOOGLE_CLIENT_SECRET"),
     googleRedirectUri: env("GOOGLE_REDIRECT_URI"),

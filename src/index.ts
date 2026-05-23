@@ -41,5 +41,11 @@ if (isDirectRun) {
   serve({ fetch: app.fetch, port }, (info) => {
     const address = info && typeof info === "object" && "port" in info ? info.port : port;
     console.log(`Javier correspondence server listening on :${address}`);
+
+    if (process.env.NODE_ENV === "production" && config.correspondenceDev) {
+      console.warn(
+        "[correspondence] CORRESPONDENCE_DEV or CORRESPONDENCE_FAKE_DEMO is enabled in production",
+      );
+    }
   });
 }

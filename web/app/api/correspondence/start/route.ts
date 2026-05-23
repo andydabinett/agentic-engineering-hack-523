@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
+import { requireApiSecret } from "@/lib/server/apiAuth";
 import { loadCorrespondenceBridge, loadListingsApi } from "@/lib/server/repo";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  const unauthorized = requireApiSecret(request);
+  if (unauthorized) return unauthorized;
+
   try {
     const body = await request.json();
     const listingId = body.listingId as string | undefined;
