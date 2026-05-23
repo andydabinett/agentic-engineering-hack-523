@@ -1,0 +1,6 @@
+{
+  "defaultProvider": "manual",
+  "defaultModel": "anthropic/claude-sonnet-4-5",
+  "defaultThinkingLevel": "low",
+  "lastChangelogVersion": "0.73.1"
+}
