@@ -4,6 +4,7 @@ import { Toaster } from "sonner";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { FloatingChat } from "@/components/floating-chat";
 import { ListingsHydrator } from "@/components/listings-hydrator";
+import { CorrespondenceHydrator } from "@/components/correspondence-hydrator";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
@@ -36,6 +37,7 @@ export default function RootLayout({
       <body className="min-h-screen bg-canvas text-ink antialiased">
         <TooltipProvider delayDuration={150}>
           <ListingsHydrator />
+          <CorrespondenceHydrator />
           <div className="flex min-h-screen">
             <SidebarNav />
             <main className="min-w-0 flex-1">{children}</main>

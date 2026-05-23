@@ -14,11 +14,22 @@ import {
 } from "@mariozechner/pi-coding-agent";
 import { ROOT } from "../config/env.js";
 import { startAgentScrape } from "../crawler/agentScrape.js";
+import {
+  buildListingSummary,
+  canStartCorrespondence,
+  correspondenceFakeDemoEnabled,
+  demoListerPhone,
+  startCorrespondence,
+  twilioConfiguredForCorrespondence,
+} from "./correspondenceClient.js";
 
 const AGENT_DIR = path.join(ROOT, "agent");
 
 /** Criteria from the latest chat request (for borough-aware scrapes). */
 let latestSearchCriteria = null;
+
+/** Emitted to the web UI after a successful start_correspondence tool run. */
+let lastCorrespondenceStart = null;
 
 const updateCriteriaTool = defineTool({
   name: "update_criteria",
@@ -104,6 +115,107 @@ const scrapeListingsTool = defineTool({
   },
 });
 
+const startCorrespondenceTool = defineTool({
+  name: "start_correspondence",
+  label: "Start broker SMS thread",
+  description:
+    "Begin autonomous SMS outreach to schedule a viewing for a listing. Use when the user asks to text, contact, reach out to, or schedule a viewing with a broker or lister — including by listing address or id (e.g. db-24).",
+  parameters: Type.Object({
+    listingId: Type.String({ description: "Dashboard listing id, e.g. db-24" }),
+    listerName: Type.Optional(Type.String()),
+    listerPhone: Type.Optional(Type.String()),
+  }),
+  async execute(params) {
+    if (!canStartCorrespondence()) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: "Correspondence is not configured — set TWILIO_* or CORRESPONDENCE_FAKE_DEMO=1.",
+          },
+        ],
+        details: { ok: false },
+      };
+    }
+
+    const { openRepository, getListingById } = await import("./listingsApi.js");
+    const repo = openRepository();
+    let listing;
+    try {
+      listing = getListingById(repo, params.listingId);
+    } finally {
+      repo.close();
+    }
+
+    if (!listing) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Listing ${params.listingId} was not found in the database.`,
+          },
+        ],
+        details: { ok: false, listingId: params.listingId },
+      };
+    }
+
+    const phone =
+      params.listerPhone ||
+      listing.brokerPhone ||
+      (correspondenceFakeDemoEnabled() ? demoListerPhone() : "");
+    if (!phone?.trim()) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `No broker phone on file for ${listing.address}. Cannot start SMS yet.`,
+          },
+        ],
+        details: { ok: false, listingId: params.listingId },
+      };
+    }
+
+    try {
+      const view = await startCorrespondence({
+        listingId: params.listingId,
+        listerPhone: phone,
+        listerName: params.listerName || listing.brokerName,
+        listingSummary: buildListingSummary(listing),
+      });
+
+      const details = {
+        ok: true,
+        fakeDemo: correspondenceFakeDemoEnabled(),
+        threadId: view.threadId,
+        listingId: view.listingId,
+        status: view.status,
+        listerName: view.listerName || listing.brokerName,
+        listerPhone: view.listerPhone,
+        brokerName: listing.brokerName,
+        address: listing.address,
+        messages: view.messages,
+      };
+      lastCorrespondenceStart = details;
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Started texting ${listing.brokerName} about ${listing.address}. I'll keep negotiating in the background.`,
+          },
+        ],
+        details,
+      };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return {
+        content: [{ type: "text", text: message }],
+        details: { ok: false, error: message },
+      };
+    }
+  },
+});
+
 const ONBOARDING_APPEND = `
 ## Web onboarding chat
 
@@ -115,7 +227,9 @@ You are helping a tenant define apartment search criteria in a short conversatio
 - When you have bedrooms, max monthly budget, neighborhood, move-in date, and the main must-haves / deal-breakers, call \`ready_to_search\` and invite them to start hunting.
 - When the user wants listings pulled **now** (search, refresh, scrape, "what's out there", "find apartments", "run a search"), call \`scrape_listings\`. Pass \`boroughs\` from their neighborhood when known; otherwise \`["all"]\` or the relevant borough id.
 - After calling \`scrape_listings\`, tell them fresh results will appear on the dashboard in a few minutes — they do not need to wait for the background crawler.
-- You MUST call tools for criteria, readiness, and scrapes — never write tool calls as XML or markdown in the message body.
+- When the user wants to **text a broker**, **reach out**, **contact a listing**, or **schedule a viewing** for a specific apartment, call \`start_correspondence\` with that listing's \`listingId\` (from the dashboard, e.g. \`db-24\`). If they describe the unit by address, match it to the best listing id you can infer.
+- After \`start_correspondence\`, tell them Javier is texting the broker and they can watch the thread on Messages.
+- You MUST call tools for criteria, readiness, scrapes, and outreach — never write tool calls as XML or markdown in the message body.
 - Do not mention tool names to the user; just chat naturally.
 `.trim();
 
@@ -146,8 +260,18 @@ async function createChatSession() {
   const { session } = await createAgentSession({
     cwd: ROOT,
     agentDir: AGENT_DIR,
-    tools: ["update_criteria", "ready_to_search", "scrape_listings"],
-    customTools: [updateCriteriaTool, readyToSearchTool, scrapeListingsTool],
+    tools: [
+      "update_criteria",
+      "ready_to_search",
+      "scrape_listings",
+      "start_correspondence",
+    ],
+    customTools: [
+      updateCriteriaTool,
+      readyToSearchTool,
+      scrapeListingsTool,
+      startCorrespondenceTool,
+    ],
     resourceLoader,
     sessionManager: SessionManager.inMemory(),
   });
@@ -269,7 +393,8 @@ export async function handleChatRequest(req) {
           if (
             toolName === "update_criteria" ||
             toolName === "ready_to_search" ||
-            toolName === "scrape_listings"
+            toolName === "scrape_listings" ||
+            toolName === "start_correspondence"
           ) {
             send({
               type: "tool-input-available",
@@ -290,6 +415,14 @@ export async function handleChatRequest(req) {
 
         await session.prompt(promptText);
         state.userTurns = userTurns;
+
+        if (lastCorrespondenceStart?.ok) {
+          send({
+            type: "data-correspondence-started",
+            data: lastCorrespondenceStart,
+          });
+          lastCorrespondenceStart = null;
+        }
 
         if (textStarted) {
           send({ type: "text-end", id: textId });

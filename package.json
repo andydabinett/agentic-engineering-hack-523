@@ -2,7 +2,7 @@
   "name": "javier-nyc-rent-concierge",
   "version": "0.1.0",
   "private": true,
-  "description": "NYC rent concierge — Nimble ingest, ClickHouse analytics, listing verification, Next.js dashboard",
+  "description": "NYC rent concierge — Nimble ingest, ClickHouse analytics, SMS correspondence, Next.js dashboard",
   "type": "module",
   "packageManager": "bun@1.3.12",
   "engines": {
@@ -11,6 +11,15 @@
   "scripts": {
     "dev": "./dev.sh",
     "dev:agent": "./dev.sh",
+    "server": "npx tsx src/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "demo:correspondence": "npx tsx scripts/demo-correspondence.ts",
+    "demo:fake-correspondence": "npx tsx scripts/demo-fake-correspondence.ts",
+    "server:fake": "CORRESPONDENCE_FAKE_DEMO=1 CORRESPONDENCE_DEV=1 npx tsx src/index.ts",
+    "sync:twilio-webhook": "npx tsx scripts/sync-twilio-webhook.ts",
+    "dev:correspondence": "bash scripts/dev-correspondence.sh",
+    "init:clickhouse": "npx tsx scripts/init_clickhouse.ts",
     "web:dev": "cd web && npm run dev",
     "web:build": "cd web && npm run build",
     "start:web": "cd web && npm run start",
@@ -31,9 +40,20 @@
     "start:prod": "bash scripts/start-production.sh"
   },
   "dependencies": {
-    "@clickhouse/client": "^1.10.1",
+    "@clickhouse/client": "^1.18.5",
+    "@hono/node-server": "^2.0.3",
     "@mariozechner/pi-coding-agent": "0.73.1",
-    "dotenv": "^16.4.7",
-    "playwright": "^1.51.0"
+    "dotenv": "^17.4.2",
+    "googleapis": "^172.0.0",
+    "hono": "^4.12.22",
+    "playwright": "^1.51.0",
+    "twilio": "^6.0.2",
+    "typebox": "^1.1.38"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.14",
+    "tsx": "^4.22.3",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.7"
   }
 }

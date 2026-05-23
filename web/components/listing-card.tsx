@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { RelativeTime } from "@/components/client-time";
 import type { Listing, ListingStatus } from "@/lib/types";
+import { ReachOutButton } from "@/components/reach-out-button";
 import { cn, formatPrice } from "@/lib/utils";
 
 interface ListingCardProps {
@@ -108,9 +109,12 @@ export function ListingCard({ listing, index = 0, fresh = false }: ListingCardPr
 
           <div className="flex items-center justify-between gap-3 pt-1">
             <StatusPill label={status.label} variant={status.variant} pulse={status.pulse} />
-            <span className="text-[11.5px] text-ink-faint">
-              <RelativeTime date={listing.listedAt} fallback="—" />
-            </span>
+            <div className="flex items-center gap-2">
+              <ReachOutButton listing={listing} />
+              <span className="text-[11.5px] text-ink-faint">
+                <RelativeTime date={listing.listedAt} fallback="—" />
+              </span>
+            </div>
           </div>
         </div>
       </Link>

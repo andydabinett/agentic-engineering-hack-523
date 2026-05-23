@@ -14,7 +14,15 @@ import {
   mergeListingSnapshots,
 } from "@/lib/liveListings";
 import { listingMatchesCriteria } from "@/lib/matchesCriteria";
-import { listings as mockListings, initialStatusCounts } from "@/lib/mockData";
+import {
+  listings as mockListings,
+  initialStatusCounts,
+  conversations as seedConversations,
+  viewings as seedViewings,
+  notifications as seedNotifications,
+  personalEvents as seedPersonalEvents,
+  initialActivityFeed,
+} from "@/lib/mockData";
 import { useAppStore } from "@/lib/store";
 import type { Listing } from "@/lib/types";
 
@@ -64,6 +72,13 @@ export function ListingsHydrator() {
     if (isDemoMode()) {
       setListings(mockListings);
       setStatusCounts(initialStatusCounts);
+      useAppStore.setState({
+        conversations: seedConversations,
+        viewings: seedViewings,
+        notifications: seedNotifications,
+        personalEvents: seedPersonalEvents,
+        activityFeed: initialActivityFeed,
+      });
       return;
     }
 

@@ -56,6 +56,8 @@ export type ConversationStatus = "awaiting" | "scheduled" | "complete";
 export interface Conversation {
   id: string;
   listingId: string;
+  /** Live correspondence server thread id (when wired). */
+  correspondenceThreadId?: string;
   brokerName: string;
   brokerPhone: string;
   messages: Message[];
