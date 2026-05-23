@@ -10,6 +10,12 @@
   },
   "scripts": {
     "dev": "./dev.sh",
+    "dev:agent": "./dev.sh",
+    "web:dev": "cd web && npm run dev",
+    "web:build": "cd web && npm run build",
+    "dev:stack": "npm run web:dev",
+    "clickhouse:migrate": "node scripts/clickhouse-migrate.js",
+    "sync:clickhouse": "node scripts/sync-clickhouse.js",
     "test:clickhouse": "node scripts/test-clickhouse.js",
     "test:zillow": "node scripts/test-zillow-scrape.js",
     "ingest": "node scripts/ingest-boroughs.js",

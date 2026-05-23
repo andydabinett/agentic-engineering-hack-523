@@ -5,7 +5,6 @@ import {
   conversations as seedConversations,
   initialActivityFeed,
   initialStatusCounts,
-  listings as seedListings,
   personalEvents as seedPersonalEvents,
   viewings as seedViewings,
 } from "./mockData";
@@ -42,6 +41,7 @@ interface AppState {
 
   // listings
   listings: Listing[];
+  setListings: (listings: Listing[]) => void;
   prependListing: (l: Listing) => void;
   updateListingStatus: (id: string, status: ListingStatus) => void;
 
@@ -61,6 +61,7 @@ interface AppState {
 
   // dashboard counts (animated tick targets)
   statusCounts: typeof initialStatusCounts;
+  setStatusCounts: (counts: typeof initialStatusCounts) => void;
   bumpStatusCount: (
     key: keyof typeof initialStatusCounts,
     by?: number,
@@ -101,7 +102,8 @@ export const useAppStore = create<AppState>((set) => ({
   resetCriteria: () => set({ criteria: { ...blankCriteria } }),
 
   // -- listings --
-  listings: seedListings,
+  listings: [],
+  setListings: (listings) => set({ listings }),
   prependListing: (l) =>
     set((state) =>
       state.listings.some((existing) => existing.id === l.id)
@@ -156,6 +158,7 @@ export const useAppStore = create<AppState>((set) => ({
 
   // -- status counts --
   statusCounts: { ...initialStatusCounts },
+  setStatusCounts: (counts) => set({ statusCounts: counts }),
   bumpStatusCount: (key, by = 1) =>
     set((state) => ({
       statusCounts: {

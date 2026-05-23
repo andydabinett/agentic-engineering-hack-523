@@ -1,27 +1,16 @@
 import { createClient } from '@clickhouse/client';
 import '../config/env.js';
+import { getClickHouseConfig } from '../config/clickhouseEnv.js';
 
 export function getClient() {
-  const host = process.env.CLICKHOUSE_HOST;
-  const password = process.env.CLICKHOUSE_PASSWORD;
-
-  if (!host || !password) {
-    throw new Error(
-      'CLICKHOUSE_HOST and CLICKHOUSE_PASSWORD are required in .env (see .env.example).',
-    );
-  }
-
-  const secure = ['1', 'true', 'yes'].includes(
-    (process.env.CLICKHOUSE_SECURE || 'true').toLowerCase(),
-  );
-  const port = process.env.CLICKHOUSE_PORT || (secure ? '8443' : '8123');
-  const protocol = secure ? 'https' : 'http';
+  const cfg = getClickHouseConfig();
+  const protocol = cfg.secure ? 'https' : 'http';
 
   return createClient({
-    url: `${protocol}://${host}:${port}`,
-    username: process.env.CLICKHOUSE_USER || 'default',
-    password,
-    database: process.env.CLICKHOUSE_DATABASE || 'default',
+    url: `${protocol}://${cfg.host}:${cfg.port}`,
+    username: cfg.username,
+    password: cfg.password,
+    database: cfg.database,
   });
 }
 

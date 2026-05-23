@@ -145,6 +145,34 @@ export class ListingRepository {
       .run(status, note, utcNow(), listingId);
   }
 
+  getById(id) {
+    return this.db.prepare('SELECT * FROM listings WHERE id = ?').get(id);
+  }
+
+  listAll({ borough, source, limit = 200, statuses } = {}) {
+    const clauses = [];
+    const params = [];
+    if (borough) {
+      clauses.push('borough = ?');
+      params.push(borough);
+    }
+    if (source) {
+      clauses.push('source = ?');
+      params.push(source);
+    }
+    if (statuses?.length) {
+      clauses.push(`status IN (${statuses.map(() => '?').join(',')})`);
+      params.push(...statuses);
+    }
+    const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+    const limitSql = limit ? `LIMIT ${Number(limit)}` : '';
+    return this.db
+      .prepare(
+        `SELECT * FROM listings ${where} ORDER BY last_seen_at DESC ${limitSql}`,
+      )
+      .all(...params);
+  }
+
   listForVerification({ borough, source, statuses, limit } = {}) {
     const clauses = [];
     const params = [];

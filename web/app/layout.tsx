@@ -3,6 +3,7 @@ import { Inter, Fraunces } from "next/font/google";
 import { Toaster } from "sonner";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { FloatingChat } from "@/components/floating-chat";
+import { ListingsHydrator } from "@/components/listings-hydrator";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
@@ -34,6 +35,7 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} ${fraunces.variable}`}>
       <body className="min-h-screen bg-canvas text-ink antialiased">
         <TooltipProvider delayDuration={150}>
+          <ListingsHydrator />
           <div className="flex min-h-screen">
             <SidebarNav />
             <main className="min-w-0 flex-1">{children}</main>

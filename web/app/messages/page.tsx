@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { differenceInDays, differenceInHours, differenceInMinutes, format } from "date-fns";
 import { MessageSquare } from "lucide-react";
@@ -11,6 +11,14 @@ import type { Conversation } from "@/lib/types";
 import { brokerInitials, cn } from "@/lib/utils";
 
 export default function MessagesPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-ink-muted">Loading messages…</div>}>
+      <MessagesPageContent />
+    </Suspense>
+  );
+}
+
+function MessagesPageContent() {
   const conversations = useAppStore((s) => s.conversations);
   const sorted = useMemo(
     () =>

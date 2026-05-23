@@ -72,6 +72,16 @@ async function main() {
     console.log(`\nRepository total: ${stats.total} (with phone: ${stats.withPhone}, with email: ${stats.withEmail})`);
     console.log(`Database: ${dbPath}`);
 
+    if (!args['no-clickhouse']) {
+      try {
+        const { syncSqliteToClickHouse } = await import('../src/clickhouse/sync.js');
+        const sync = await syncSqliteToClickHouse({ dbPath });
+        console.log(`ClickHouse sync: ${sync.inserted} row(s) → nyc_rent_ledger`);
+      } catch (chErr) {
+        console.warn(`ClickHouse sync skipped: ${chErr.message}`);
+      }
+    }
+
     const sample = repo.listWithContacts({ limit: 5 });
     if (sample.length) {
       console.log('\nSample contacts:');

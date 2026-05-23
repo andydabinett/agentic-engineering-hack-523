@@ -22,6 +22,25 @@ export interface Listing {
   amenities: string[];
   noBrokerFee: boolean;
   description: string;
+  /** Live ingest fields (SQLite / Nimble) */
+  listingLink?: string;
+  source?: string;
+  borough?: string;
+  dbStatus?: string;
+  agencyName?: string | null;
+  agentEmail?: string | null;
+}
+
+export interface PipelineStats {
+  listingsMonitored: number;
+  activeListings: number;
+  expiredListings: number;
+  withPhone: number;
+  withEmail: number;
+  matches: number;
+  brokersTexted: number;
+  viewingsScheduled: number;
+  breakdown: { borough: string; source: string; status: string; count: number }[];
 }
 
 export interface Message {

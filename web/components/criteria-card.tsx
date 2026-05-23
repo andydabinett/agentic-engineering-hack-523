@@ -1,14 +1,18 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { triggerIngest } from "@/lib/hydrate";
 import { useAppStore } from "@/lib/store";
 import { cn, formatPricePerMonth } from "@/lib/utils";
 
 export function CriteriaCard() {
   const router = useRouter();
+  const [ingesting, setIngesting] = useState(false);
   const criteria = useAppStore((s) => s.criteria);
 
   const formattedPrice = criteria.maxPrice != null ? formatPricePerMonth(criteria.maxPrice) : null;
@@ -45,8 +49,26 @@ export function CriteriaCard() {
       <footer className="border-t border-rule p-5">
         <Button
           size="lg"
-          disabled={!criteria.readyToSearch}
-          onClick={() => router.push("/dashboard")}
+          disabled={!criteria.readyToSearch || ingesting}
+          onClick={async () => {
+            setIngesting(true);
+            toast.message("Starting ingest…", {
+              description: "Nimble search + SQLite + ClickHouse sync",
+            });
+            try {
+              const result = await triggerIngest(criteria as unknown as Record<string, unknown>);
+              if (!result.ok) {
+                toast.error("Ingest failed", { description: result.stderr || result.error });
+              } else {
+                toast.success("Ingest complete", { description: "Opening dashboard" });
+              }
+            } catch {
+              toast.error("Could not reach ingest API");
+            } finally {
+              setIngesting(false);
+              router.push("/dashboard");
+            }
+          }}
           className={cn(
             "w-full text-[15px] tracking-tight",
             criteria.readyToSearch
@@ -54,7 +76,9 @@ export function CriteriaCard() {
               : "bg-surface-raised text-ink-faint border border-rule",
           )}
         >
-          {criteria.readyToSearch ? (
+          {ingesting ? (
+            "Ingesting…"
+          ) : criteria.readyToSearch ? (
             <span className="flex items-center gap-1.5">
               Start hunting
               <ArrowRight className="h-4 w-4" strokeWidth={2} />

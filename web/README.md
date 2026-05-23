@@ -4,8 +4,8 @@ The dashboard for an AI agent that finds apartments in NYC (East Village
 focused), texts brokers via SMS, parses replies, checks your Google
 Calendar, and books viewings autonomously. This package is the
 **frontend only** — the chat agent lives elsewhere (sibling `/agent`)
-and connects through a small `/api/chat` contract that is currently
-stubbed.
+and connects through `/api/chat`, which streams responses from the pi
+agent in the repo `agent/` directory (via `src/bridge/chatAgent.js`).
 
 Built with Next.js 14 App Router, TypeScript, Tailwind CSS, shadcn-style
 primitives, the Vercel AI SDK v5 (`@ai-sdk/react`), Framer Motion, and
@@ -24,9 +24,9 @@ npm run dev
 
 Then open <http://localhost:3000>. The root redirects to `/onboarding`.
 
-> The build/runtime is fully self-contained. No env vars, no DB, no
-> outbound network calls except to Unsplash for listing photos. Tested
-> on Node 22+.
+> Chat requires `OPENROUTER_API_KEY` in the repo root `.env`. Listing
+> pages can use live SQLite data via `/api/listings` (see `INTEGRATION.md`).
+> Tested on Node 22+.
 
 ---
 
@@ -135,19 +135,15 @@ Real form:
 }
 ```
 
-### Replacing the stub
+### Agent configuration
 
-1. Implement `app/api/chat/route.ts` to call your agent (pi SDK +
-   OpenRouter, in the sibling `/agent` package, can speak this
-   protocol directly via `streamText().toUIMessageStreamResponse()`).
-2. Make sure your agent emits **either** the custom data parts above
-   **or** real tool calls with the same `toolName`s and shapes — the
-   frontend handles both. See `components/chat-panel.tsx` (the `onData`
-   and `onToolCall` handlers).
-3. The request body shape is whatever `useChat` sends by default
-   (an object containing `messages`, an array of v5 `UIMessage`s).
-   `app/api/chat/route.ts` only needs to count user messages from
-   `body.messages` to decide what to stream back.
+- System prompt: `agent/SYSTEM.md` plus onboarding instructions in
+  `src/bridge/chatAgent.js`
+- Model / provider: `agent/models.json` and `agent/settings.json`
+  (OpenRouter via `OPENROUTER_API_KEY`)
+- The bridge emits `tool-input-available` events for
+  `update_criteria` / `ready_to_search`; the frontend also accepts the
+  legacy custom data parts from the old stub. See `components/chat-panel.tsx`.
 
 ---
 
@@ -208,7 +204,7 @@ app/
   listing/[id]/page.tsx Detail + gallery + FPA + embedded SMS
   messages/page.tsx     Inbox + thread
   calendar/page.tsx     Week view
-  api/chat/route.ts     ★ Stub endpoint to replace
+  api/chat/route.ts     Pi agent SSE bridge
 
 components/
   ui/                   shadcn-style primitives (button, card, sheet, ...)
