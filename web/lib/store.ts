@@ -8,6 +8,11 @@ import {
   personalEvents as seedPersonalEvents,
   viewings as seedViewings,
 } from "./mockData";
+import {
+  dedupeWebListings,
+  listingDisplayKey,
+  sortListingsForFeed,
+} from "./liveListings";
 import type {
   ActivityEntry,
   Conversation,
@@ -42,6 +47,11 @@ interface AppState {
   // listings
   listings: Listing[];
   setListings: (listings: Listing[]) => void;
+  /** Merge poll/ingest results; marks new ids fresh and sorts feed. */
+  mergeLiveListings: (incoming: Listing[], newIds: string[]) => void;
+  freshListingIds: string[];
+  freshListingAt: Record<string, number>;
+  pruneStaleFreshListings: (maxAgeMs: number) => void;
   prependListing: (l: Listing) => void;
   updateListingStatus: (id: string, status: ListingStatus) => void;
 
@@ -103,13 +113,59 @@ export const useAppStore = create<AppState>((set) => ({
 
   // -- listings --
   listings: [],
-  setListings: (listings) => set({ listings }),
+  freshListingIds: [],
+  freshListingAt: {},
+  setListings: (listings) =>
+    set((state) => ({
+      listings: sortListingsForFeed(
+        dedupeWebListings(listings),
+        state.freshListingIds,
+      ),
+    })),
+  mergeLiveListings: (incoming, newIds) =>
+    set((state) => {
+      const byKey = new Map(state.listings.map((l) => [listingDisplayKey(l), l]));
+      for (const row of dedupeWebListings(incoming)) {
+        byKey.set(listingDisplayKey(row), row);
+      }
+      const freshListingAt = { ...state.freshListingAt };
+      const freshSet = new Set(state.freshListingIds);
+      const now = Date.now();
+      for (const id of newIds) {
+        freshSet.add(id);
+        freshListingAt[id] = now;
+      }
+      const freshListingIds = [...freshSet];
+      const listings = sortListingsForFeed(
+        dedupeWebListings([...byKey.values()]),
+        freshListingIds,
+      );
+      return { listings, freshListingIds, freshListingAt };
+    }),
+  pruneStaleFreshListings: (maxAgeMs) =>
+    set((state) => {
+      const now = Date.now();
+      const freshListingIds = state.freshListingIds.filter(
+        (id) => now - (state.freshListingAt[id] ?? 0) < maxAgeMs,
+      );
+      const freshListingAt = { ...state.freshListingAt };
+      for (const id of Object.keys(freshListingAt)) {
+        if (!freshListingIds.includes(id)) delete freshListingAt[id];
+      }
+      return {
+        freshListingIds,
+        freshListingAt,
+        listings: sortListingsForFeed(state.listings, freshListingIds),
+      };
+    }),
   prependListing: (l) =>
-    set((state) =>
-      state.listings.some((existing) => existing.id === l.id)
-        ? state
-        : { listings: [l, ...state.listings] },
-    ),
+    set((state) => {
+      const key = listingDisplayKey(l);
+      if (state.listings.some((existing) => listingDisplayKey(existing) === key)) {
+        return state;
+      }
+      return { listings: [l, ...state.listings] };
+    }),
   updateListingStatus: (id, status) =>
     set((state) => ({
       listings: state.listings.map((l) =>

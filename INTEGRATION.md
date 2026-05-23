@@ -45,6 +45,8 @@ Skip ClickHouse on ingest: `node scripts/ingest-boroughs.js --no-clickhouse`
 
 Demo UI (mock listings): add `?demo=1` to any page.
 
+Live dashboard: `ListingsHydrator` polls `GET /api/listings?since=…` every ~20s (see `NEXT_PUBLIC_LISTINGS_POLL_MS`). New rows get a green **New** badge, activity feed entry, and toast.
+
 ## Environment
 
 Copy `.env.example` → `.env` at **repo root**. The web server loads the same file when API routes import `src/config/env.js`.

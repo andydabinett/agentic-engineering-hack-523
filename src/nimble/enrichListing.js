@@ -14,6 +14,7 @@ import {
   mergeContacts,
   needsPlaywrightFallback,
 } from '../scrapers/playwrightContacts.js';
+import { normalizeListingUrl } from '../listings/normalizeUrl.js';
 
 function pageText(extractResponse) {
   const data = extractResponse.data || {};
@@ -52,9 +53,10 @@ export async function discoverListingCandidates(
   const candidates = [];
 
   const add = (item) => {
-    if (!item.url || seen.has(item.url)) return;
-    seen.add(item.url);
-    candidates.push(item);
+    const url = normalizeListingUrl(item.url);
+    if (!url || seen.has(url)) return;
+    seen.add(url);
+    candidates.push({ ...item, url });
   };
 
   const isListing =

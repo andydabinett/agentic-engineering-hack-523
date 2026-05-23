@@ -1,7 +1,7 @@
 import { parseArgs, flagList } from '../cli/parseArgs.js';
 import { parseDurationMs } from './parseDuration.js';
 
-const DEFAULT_INGEST_INTERVAL_MS = 30 * 60_000;
+const DEFAULT_INGEST_INTERVAL_MS = 2 * 60_000;
 const DEFAULT_VERIFY_INTERVAL_MS = 60 * 60_000;
 const DEFAULT_POLL_MS = 60_000;
 
