@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Building2, CalendarRange, LayoutGrid, MessageSquare, Bell, Trash2, CalendarCheck } from "lucide-react";
+import { Building2, CalendarRange, LayoutGrid, MessageSquare, Bell, Trash2, CalendarCheck, Sliders } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/lib/store";
@@ -22,6 +22,7 @@ const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutGrid },
   { href: "/messages", label: "Messages", icon: MessageSquare },
   { href: "/calendar", label: "Calendar", icon: CalendarRange },
+  { href: "/criteria", label: "My Criteria", icon: Sliders },
 ];
 
 export function SidebarNav() {
