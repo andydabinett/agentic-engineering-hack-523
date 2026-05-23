@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ClientTime } from "@/components/client-time";
 import { pollUntilScrapeDone } from "@/lib/scrapePoll";
+import { handleCorrespondenceStarted } from "@/lib/correspondencePoll";
 import { useAppStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
@@ -52,6 +53,16 @@ export function ChatPanel({ variant = "page" }: ChatPanelProps) {
       }
       if (part.type === "data-ready-to-search") {
         markReadyToSearch();
+        return;
+      }
+      if (part.type === "data-correspondence-started") {
+        const data = (part as { data: Record<string, unknown> }).data;
+        const listingId = String(data.listingId ?? "");
+        const listing = useAppStore.getState().listings.find((l) => l.id === listingId);
+        handleCorrespondenceStarted(
+          data as Parameters<typeof handleCorrespondenceStarted>[0],
+          listing,
+        );
         return;
       }
     },

@@ -111,8 +111,11 @@ Persistence: ClickHouse when configured; otherwise in-memory (resets on server r
 
 - `POST /api/chat` — streams from the pi agent in `agent/` (`src/bridge/chatAgent.js`)
 - Requires `OPENROUTER_API_KEY` in repo root `.env`
-- Tools: `update_criteria`, `ready_to_search`, `scrape_listings` (on-demand Nimble ingest between crawler ticks)
+- Tools: `update_criteria`, `ready_to_search`, `scrape_listings`, `start_correspondence` (SMS outreach via correspondence server)
 - `GET /api/scrape/status` — poll while agent-triggered scrape runs
+- `POST /api/correspondence/start` — start SMS thread from dashboard (also used by chat tool)
+- `GET /api/correspondence/:threadId` — poll thread status for Messages UI
+- Set `CORRESPONDENCE_API_URL` (default `http://localhost:3001`) so the web app can reach the Hono server
 
 ## Cloud hosting
 
@@ -122,5 +125,5 @@ See **[DEPLOY.md](DEPLOY.md)** — Railway (recommended), Render, or Vercel.
 
 - Senso, x402 — PRD only
 - Rent-stabilized CSV join — planned
-- `web/app/messages` → correspondence API (frontend can poll `GET /correspondence/:id`)
+- `web/app/messages` reads live threads when correspondence is started from chat or **Reach out** on listing cards (polls via `CorrespondenceHydrator`)
 - Google Calendar in production (OAuth routes exist; `GOOGLE_REFRESH_TOKEN` demo shortcut)

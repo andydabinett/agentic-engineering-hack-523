@@ -30,3 +30,7 @@ export function loadChatAgent() {
 export function loadAgentScrape() {
   return repoImport("src/crawler/agentScrape.js");
 }
+
+export function loadCorrespondenceBridge() {
+  return repoImport("src/bridge/correspondenceClient.js");
+}

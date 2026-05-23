@@ -182,6 +182,18 @@ Expect `{ "status": "ok", "twilioConfigured": true, ... }`.
 
 ---
 
+## Chat integration
+
+With `npm run web:dev` + `npm run dev:correspondence` + `OPENROUTER_API_KEY`:
+
+1. Use chat to search/scrape listings.
+2. Say *"Text the broker on db-24"* (or use **Reach out** on a matched listing card).
+3. Chat calls `start_correspondence` → SMS thread starts → **Messages** updates live.
+
+Requires `CORRESPONDENCE_API_URL=http://localhost:3001` in `.env`.
+
+---
+
 ## Tests
 
 ```bash

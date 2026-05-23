@@ -2,7 +2,6 @@
 
 import { create } from "zustand";
 import {
-  conversations as seedConversations,
   initialActivityFeed,
   initialStatusCounts,
   personalEvents as seedPersonalEvents,
@@ -59,7 +58,9 @@ interface AppState {
 
   // conversations
   conversations: Conversation[];
+  activeCorrespondenceThreadIds: string[];
   upsertConversation: (c: Conversation) => void;
+  trackCorrespondenceThread: (threadId: string) => void;
   appendMessage: (conversationId: string, message: Message) => void;
   setConversationStatus: (
     conversationId: string,
@@ -179,15 +180,36 @@ export const useAppStore = create<AppState>((set) => ({
     })),
 
   // -- conversations --
-  conversations: seedConversations,
+  conversations: [],
+  activeCorrespondenceThreadIds: [],
   upsertConversation: (c) =>
     set((state) => {
       const idx = state.conversations.findIndex((existing) => existing.id === c.id);
-      if (idx === -1) return { conversations: [c, ...state.conversations] };
+      const nextIds = state.activeCorrespondenceThreadIds.slice();
+      if (c.correspondenceThreadId && !nextIds.includes(c.correspondenceThreadId)) {
+        nextIds.push(c.correspondenceThreadId);
+      }
+      if (idx === -1) {
+        return {
+          conversations: [c, ...state.conversations],
+          activeCorrespondenceThreadIds: nextIds,
+        };
+      }
       const next = state.conversations.slice();
       next[idx] = c;
-      return { conversations: next };
+      return { conversations: next, activeCorrespondenceThreadIds: nextIds };
     }),
+  trackCorrespondenceThread: (threadId) =>
+    set((state) =>
+      state.activeCorrespondenceThreadIds.includes(threadId)
+        ? state
+        : {
+            activeCorrespondenceThreadIds: [
+              ...state.activeCorrespondenceThreadIds,
+              threadId,
+            ],
+          },
+    ),
   appendMessage: (conversationId, message) =>
     set((state) => ({
       conversations: state.conversations.map((c) =>
