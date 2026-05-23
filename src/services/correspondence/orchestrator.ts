@@ -30,6 +30,16 @@ export class CorrespondenceOrchestrator {
   ) {}
 
   async start(input: StartCorrespondenceInput): Promise<ThreadView> {
+    const threads = await this.store.listThreads({ userId: input.userId });
+    const activeThread = threads.find(
+      (t) => t.status !== "completed" && t.status !== "failed",
+    );
+    if (activeThread) {
+      throw new Error(
+        `An active correspondence thread already exists (Thread ${activeThread.threadId} for listing ${activeThread.listingId}). Please complete or fail the current thread before starting a new one.`
+      );
+    }
+
     const thread = await this.store.createThread({
       ...input,
       listerPhone: normalizePhone(input.listerPhone),
@@ -56,7 +66,16 @@ export class CorrespondenceOrchestrator {
   }
 
   async handleInboundSms(from: string, body: string, twilioSid?: string): Promise<ThreadView | null> {
-    const thread = await this.store.findActiveThreadByPhone(normalizePhone(from));
+    let thread = await this.store.findActiveThreadByPhone(normalizePhone(from));
+    if (!thread && normalizePhone(from) === "+16314030557") {
+      const threads = await this.store.listThreads({});
+      const active = threads.find((t) => t.status !== "completed" && t.status !== "failed");
+      if (active) {
+        thread = active;
+        console.log(`[orchestrator] Routing inbound message from redirect phone ${from} to active thread ${thread.threadId} for listing ${thread.listingId}`);
+      }
+    }
+
     if (!thread) {
       return null;
     }
@@ -121,10 +140,21 @@ export class CorrespondenceOrchestrator {
         trimmed,
         result.sid,
       );
+
+      // If we were previously failed, recover status to initiated and clear error
+      if (thread.status === "failed") {
+        await this.store.updateThread(threadId, { status: "initiated", errorMessage: null });
+      }
+
       const messages = await this.store.getMessages(threadId);
       const outboundCount = messages.filter((m) => m.direction === "outbound").length;
+
+      // Refresh thread status locally
+      const freshThread = await this.store.getThread(threadId);
+      const currentStatus = freshThread ? freshThread.status : "initiated";
+
       const nextStatus = statusAfterOutbound(
-        thread.status,
+        currentStatus,
         outboundCount === 1,
         trimmed,
       );

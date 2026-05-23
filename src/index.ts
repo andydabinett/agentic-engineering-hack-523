@@ -8,15 +8,18 @@ import { findAvailablePort } from "./port.ts";
 import { createCorrespondenceRoutes } from "./routes/correspondence.ts";
 import { createGoogleAuthRoutes } from "./routes/auth/google.ts";
 import { createTwilioWebhookRoutes } from "./routes/webhooks/twilio.ts";
+import { createTextbeltWebhookRoutes } from "./routes/webhooks/textbelt.ts";
 import type { AppDeps } from "./app.ts";
 
 export function createServer(deps?: AppDeps) {
   const resolved = deps ?? createAppDeps(loadConfig());
   const app = new Hono();
 
+  app.get("/", (c) => c.text("Javier Rent Concierge Correspondence Server is running! Check /health for status."));
   app.get("/health", (c) => c.json(healthPayload(resolved.config)));
   app.route("/correspondence", createCorrespondenceRoutes(resolved));
   app.route("/webhooks/twilio", createTwilioWebhookRoutes(resolved));
+  app.route("/webhooks/textbelt", createTextbeltWebhookRoutes(resolved));
   app.route("/auth", createGoogleAuthRoutes(resolved));
 
   return app;

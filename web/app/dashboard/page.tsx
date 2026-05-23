@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Sparkles } from "lucide-react";
 import { listingMatchesCriteria } from "@/lib/matchesCriteria";
 import { useAppStore } from "@/lib/store";
@@ -8,12 +8,15 @@ import { DashboardStatusBar } from "@/components/dashboard-status-bar";
 import { ActivityFeed } from "@/components/activity-feed";
 import { ListingCard } from "@/components/listing-card";
 import { useDemoMode } from "@/components/use-demo-mode";
+import { startCorrespondenceForListing, handleCorrespondenceStarted } from "@/lib/correspondencePoll";
+import { toast } from "sonner";
 
 export default function DashboardPage() {
   const listings = useAppStore((s) => s.listings);
   const criteria = useAppStore((s) => s.criteria);
   const liveFreshIds = useAppStore((s) => s.freshListingIds);
   const { runDemo, freshListingIds: demoFreshIds } = useDemoMode();
+  const [triggering, setTriggering] = useState(false);
 
   const visibleListings = useMemo(
     () => listings.filter((l) => listingMatchesCriteria(l, criteria)),
@@ -25,6 +28,37 @@ export default function DashboardPage() {
     demoFreshIds.forEach((id) => s.add(id));
     return s;
   }, [liveFreshIds, demoFreshIds]);
+
+  const triggerLatestOutreach = async () => {
+    const latestListing = visibleListings[0];
+    if (!latestListing) {
+      toast.error("No matching listings found to text");
+      return;
+    }
+    setTriggering(true);
+    try {
+      const view = await startCorrespondenceForListing(latestListing.id);
+      handleCorrespondenceStarted(
+        {
+          ok: true,
+          fakeDemo: view.fakeDemo,
+          threadId: view.threadId,
+          listingId: view.listingId,
+          status: view.status,
+          brokerName: latestListing.brokerName,
+          address: latestListing.address,
+          messages: view.messages,
+        },
+        latestListing,
+      );
+    } catch (err) {
+      toast.error("Could not start outreach", {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setTriggering(false);
+    }
+  };
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -46,17 +80,28 @@ export default function DashboardPage() {
                 when the crawler finds new matches.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={runDemo}
-              className="inline-flex items-center gap-1.5 rounded-md border border-rule px-2.5 py-1.5 text-[11.5px] text-ink-muted hover:border-rule-strong hover:bg-surface-raised hover:text-ink"
-              aria-label="Run demo sequence"
-              title="Run demo sequence (⌘⇧D)"
-            >
-              <Sparkles className="h-3 w-3" />
-              <span className="font-mono">⌘⇧D</span>
-              <span>demo</span>
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={visibleListings.length === 0 || triggering}
+                onClick={triggerLatestOutreach}
+                className="inline-flex items-center gap-1.5 rounded-md border border-rule px-2.5 py-1.5 text-[11.5px] text-ink-muted hover:border-rule-strong hover:bg-surface-raised hover:text-ink disabled:opacity-50"
+              >
+                <span>{triggering ? "Texting..." : "Text Latest Listing"}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={runDemo}
+                className="inline-flex items-center gap-1.5 rounded-md border border-rule px-2.5 py-1.5 text-[11.5px] text-ink-muted hover:border-rule-strong hover:bg-surface-raised hover:text-ink"
+                aria-label="Run demo sequence"
+                title="Run demo sequence (⌘⇧D)"
+              >
+                <Sparkles className="h-3 w-3" />
+                <span className="font-mono">⌘⇧D</span>
+                <span>demo</span>
+              </button>
+            </div>
           </div>
 
           <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">

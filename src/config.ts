@@ -6,6 +6,7 @@ export interface Config {
   twilioAccountSid: string | undefined;
   twilioAuthToken: string | undefined;
   twilioPhoneNumber: string | undefined;
+  textbeltApiKey: string | undefined;
   clickhouseHost: string | undefined;
   clickhousePort: number;
   clickhouseUser: string;
@@ -33,11 +34,15 @@ export function loadConfig(): Config {
     twilioAccountSid: env("TWILIO_ACCOUNT_SID"),
     twilioAuthToken: env("TWILIO_AUTH_TOKEN"),
     twilioPhoneNumber: env("TWILIO_PHONE_NUMBER"),
+    textbeltApiKey: env("TEXTBELT_API_KEY"),
     clickhouseHost: env("CLICKHOUSE_HOST"),
     clickhousePort: Number(env("CLICKHOUSE_PORT", "8443")),
     clickhouseUser: env("CLICKHOUSE_USER", "default")!,
-    clickhousePassword: env("CLICKHOUSE_PASSWORD"),
-    clickhouseDatabase: env("CLICKHOUSE_DATABASE", "javier")!,
+    clickhousePassword:
+      env("CLICKHOUSE_PASSWORD") ??
+      env("CLICKHOUSE_API_KEY") ??
+      env("CLICKHOUSE_KEY"),
+    clickhouseDatabase: env("CLICKHOUSE_DATABASE", "default")!,
     clickhouseSecure: env("CLICKHOUSE_SECURE", "true") === "true",
     googleClientId: env("GOOGLE_CLIENT_ID"),
     googleClientSecret: env("GOOGLE_CLIENT_SECRET"),
@@ -48,7 +53,8 @@ export function loadConfig(): Config {
 
 export function twilioConfigured(config: Config): boolean {
   return Boolean(
-    config.twilioAccountSid && config.twilioAuthToken && config.twilioPhoneNumber,
+    (config.twilioAccountSid && config.twilioAuthToken && config.twilioPhoneNumber) ||
+      config.textbeltApiKey
   );
 }
 

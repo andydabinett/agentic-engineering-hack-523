@@ -51,6 +51,14 @@ export async function runCrawlerCycle(config, kind = 'all') {
       }
     }
 
+    // Trigger LLM listing evaluation & Twilio SMS outreach
+    try {
+      const { evaluateListings } = await import('./evaluation.js');
+      await evaluateListings(repo);
+    } catch (evalErr) {
+      console.error('[crawler] Listing evaluation failed:', evalErr.message);
+    }
+
     result.stats = repo.stats();
     result.finishedAt = new Date().toISOString();
     return result;

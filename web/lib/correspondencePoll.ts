@@ -163,6 +163,7 @@ export function handleCorrespondenceStarted(
     listingId?: string;
     address?: string;
     brokerName?: string;
+    listerName?: string;
     messages?: CorrespondenceThreadView["messages"];
     status?: string;
   },

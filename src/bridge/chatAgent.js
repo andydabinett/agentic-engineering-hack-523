@@ -22,6 +22,7 @@ import {
   startCorrespondence,
   twilioConfiguredForCorrespondence,
 } from "./correspondenceClient.js";
+import { saveCriteria } from "../config/criteria.js";
 
 const AGENT_DIR = path.join(ROOT, "agent");
 
@@ -334,6 +335,9 @@ export async function handleChatRequest(req) {
 
   const messages = body.messages ?? [];
   latestSearchCriteria = body.criteria ?? null;
+  if (latestSearchCriteria) {
+    saveCriteria(latestSearchCriteria);
+  }
   const userTurns = countUserTurns(messages);
   const promptText = extractLastUserText(messages);
 

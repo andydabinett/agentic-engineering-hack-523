@@ -36,37 +36,30 @@ export async function POST(request: Request) {
   }
 
   let boroughs = body.boroughs;
-  if (!boroughs?.length && body.criteria) {
+  if (body.criteria) {
     const api = await loadListingsApi();
-    boroughs = api.boroughIdsFromCriteria(body.criteria);
+    await api.saveCriteria(body.criteria);
+    if (!boroughs?.length) {
+      boroughs = api.boroughIdsFromCriteria(body.criteria);
+    }
   }
   if (!boroughs?.length) boroughs = ["brooklyn"];
   const maxResults = body.maxResults ?? 3;
-  const args = [
-    "--boroughs",
-    boroughs.join(" "),
-    "--max-results",
-    String(maxResults),
-    "--depth",
-    "deep",
-  ];
-  if (process.env.CLOUD_INGEST === "1") {
-    args.push("--no-playwright");
-  }
 
   try {
-    const result = await runIngest(args);
-    const ok = result.code === 0;
-    return NextResponse.json(
-      {
-        ok,
-        boroughs,
-        maxResults,
-        stdout: result.stdout.slice(-4000),
-        stderr: result.stderr.slice(-2000),
-      },
-      { status: ok ? 200 : 500 },
-    );
+    const { loadAgentScrape } = await import("@/lib/server/repo");
+    const { startAgentScrape } = await loadAgentScrape();
+    const result = startAgentScrape({
+      boroughs,
+      maxResults,
+      criteria: body.criteria,
+    });
+    return NextResponse.json({
+      ok: result.ok,
+      boroughs,
+      maxResults,
+      message: result.message,
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ ok: false, error: message }, { status: 500 });

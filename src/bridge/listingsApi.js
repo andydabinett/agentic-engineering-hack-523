@@ -4,6 +4,7 @@ import { listListingsFromClickHouse, sqliteDbExists } from '../clickhouse/listin
 export { sqliteDbExists };
 import { mapRowToWebListing, mapRowsToWebListings } from './mapListing.js';
 import { buildPipelineStats } from './pipelineStats.js';
+export { saveCriteria } from '../config/criteria.js';
 
 export function openRepository(dbPath) {
   return new ListingRepository(dbPath);

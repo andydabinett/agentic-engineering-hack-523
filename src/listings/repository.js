@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS listings (
   last_seen_at TEXT NOT NULL,
   last_verified_at TEXT,
   verification_note TEXT,
+  evaluation_status TEXT NOT NULL DEFAULT 'pending',
   raw_search_json TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_listings_borough ON listings(borough);
@@ -53,6 +54,7 @@ const CONTACT_COLUMNS = [
   ['agent_phone', 'TEXT'],
   ['photos_json', 'TEXT'],
   ['dedupe_key', 'TEXT'],
+  ['evaluation_status', "TEXT NOT NULL DEFAULT 'pending'"],
 ];
 
 function migrateSchema(db) {
@@ -207,6 +209,18 @@ export class ListingRepository {
 
   getById(id) {
     return this.db.prepare('SELECT * FROM listings WHERE id = ?').get(id);
+  }
+
+  listPendingEvaluation({ limit = 100 } = {}) {
+    return this.db
+      .prepare("SELECT * FROM listings WHERE evaluation_status = 'pending' AND status = 'active' LIMIT ?")
+      .all(limit);
+  }
+
+  updateEvaluationStatus(id, status) {
+    this.db
+      .prepare("UPDATE listings SET evaluation_status = ? WHERE id = ?")
+      .run(status, id);
   }
 
   listAll({ borough, source, limit = 200, statuses, since } = {}) {

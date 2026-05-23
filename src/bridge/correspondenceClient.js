@@ -11,9 +11,10 @@ export function correspondenceApiUrl() {
 
 export function twilioConfiguredForCorrespondence() {
   return Boolean(
-    process.env.TWILIO_ACCOUNT_SID?.trim() &&
+    (process.env.TWILIO_ACCOUNT_SID?.trim() &&
       process.env.TWILIO_AUTH_TOKEN?.trim() &&
-      process.env.TWILIO_PHONE_NUMBER?.trim(),
+      process.env.TWILIO_PHONE_NUMBER?.trim()) ||
+      process.env.TEXTBELT_API_KEY?.trim()
   );
 }
 

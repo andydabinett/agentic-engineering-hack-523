@@ -25,7 +25,7 @@ const ALLOWED_TRANSITIONS: Record<
   viewing_confirmed: ["calendar_event_created", "completed", "failed"],
   calendar_event_created: ["completed", "failed"],
   completed: [],
-  failed: [],
+  failed: ["initiated"],
   needs_user_input: ["negotiating_time", "viewing_proposed", "failed"],
 };
 

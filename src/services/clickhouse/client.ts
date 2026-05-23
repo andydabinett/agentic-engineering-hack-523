@@ -89,8 +89,9 @@ export class ClickHouseCorrespondenceStore implements CorrespondenceStore {
     const result = await this.client.query({
       query: `
         SELECT *
-        FROM ${this.database}.correspondence_threads FINAL
+        FROM ${this.database}.correspondence_threads
         WHERE thread_id = {threadId:UUID}
+        ORDER BY updated_at DESC
         LIMIT 1
       `,
       query_params: { threadId },
@@ -106,7 +107,7 @@ export class ClickHouseCorrespondenceStore implements CorrespondenceStore {
     const result = await this.client.query({
       query: `
         SELECT *
-        FROM ${this.database}.correspondence_threads FINAL
+        FROM ${this.database}.correspondence_threads
         WHERE lister_phone = {phone:String}
           AND status NOT IN ('completed', 'failed')
         ORDER BY updated_at DESC
@@ -133,11 +134,16 @@ export class ClickHouseCorrespondenceStore implements CorrespondenceStore {
       clauses.push("user_id = {userId:String}");
       params.userId = filters.userId;
     }
-    const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
+    const where = clauses.length ? `AND ${clauses.join(" AND ")}` : "";
     const result = await this.client.query({
       query: `
         SELECT *
-        FROM ${this.database}.correspondence_threads FINAL
+        FROM ${this.database}.correspondence_threads
+        WHERE (thread_id, updated_at) IN (
+          SELECT thread_id, max(updated_at)
+          FROM ${this.database}.correspondence_threads
+          GROUP BY thread_id
+        )
         ${where}
         ORDER BY updated_at DESC
       `,

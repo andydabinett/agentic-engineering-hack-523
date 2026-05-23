@@ -7,6 +7,7 @@ import { GoogleCalendarProvider } from "./services/calendar/google.ts";
 import { CorrespondenceOrchestrator } from "./services/correspondence/orchestrator.ts";
 import { FakeSmsProvider } from "./services/sms/provider.ts";
 import { createTwilioSmsProvider } from "./services/sms/twilio.ts";
+import { createTextbeltSmsProvider } from "./services/sms/textbelt.ts";
 import type { CorrespondenceStore } from "./services/correspondence/types.ts";
 import type { SmsProvider } from "./services/sms/provider.ts";
 import type { CalendarProvider } from "./services/calendar/provider.ts";
@@ -32,7 +33,11 @@ export function createAppDeps(config: Config, overrides?: Partial<AppDeps>): App
 
   const sms =
     overrides?.sms ??
-    (twilioConfigured(config) ? createTwilioSmsProvider(config) : new FakeSmsProvider());
+    (config.textbeltApiKey
+      ? createTextbeltSmsProvider(config)
+      : twilioConfigured(config)
+        ? createTwilioSmsProvider(config)
+        : new FakeSmsProvider());
 
   const calendar =
     overrides?.calendar ??
