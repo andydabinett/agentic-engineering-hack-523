@@ -41,6 +41,7 @@ export function ChatPanel({ variant = "page" }: ChatPanelProps) {
 
   const { messages, sendMessage, status } = useChat({
     messages: [SEED_MESSAGE],
+    // @ts-ignore
     body: { criteria },
     onData: (part) => {
       // Custom data parts: data-update-criteria / data-ready-to-search
