@@ -8,8 +8,8 @@ export function openRepository(dbPath) {
   return new ListingRepository(dbPath);
 }
 
-export function listListings(repo, { borough, source, limit = 200 } = {}) {
-  const rows = repo.listAll({ borough, source, limit });
+export function listListings(repo, { borough, source, limit = 200, since } = {}) {
+  const rows = repo.listAll({ borough, source, limit, since });
   return mapRowsToWebListings(rows);
 }
 
@@ -17,6 +17,9 @@ export function listListings(repo, { borough, source, limit = 200 } = {}) {
 export async function listListingsAuto(repo, opts = {}) {
   if (sqliteDbExists() && repo) {
     return listListings(repo, opts);
+  }
+  if (opts.since) {
+    return [];
   }
   return listListingsFromClickHouse(opts);
 }

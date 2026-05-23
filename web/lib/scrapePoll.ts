@@ -28,7 +28,7 @@ export function pollUntilScrapeDone(
 
       if (!status.running && status.finishedAt) {
         clearInterval(id);
-        const [listings, stats] = await Promise.all([
+        const [{ listings }, stats] = await Promise.all([
           fetchListingsFromApi(),
           fetchPipelineStats(),
         ]);

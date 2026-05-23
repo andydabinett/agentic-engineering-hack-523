@@ -34,9 +34,15 @@ export async function listListingsFromClickHouse({ borough, source, limit = 200 
         status,
         scraped_at AS last_seen_at,
         scraped_at AS first_seen_at
-      FROM nyc_rent_ledger
-      WHERE ${clauses.join(' AND ')}
-      ORDER BY scraped_at DESC
+      FROM (
+        SELECT
+          *,
+          row_number() OVER (PARTITION BY url ORDER BY scraped_at DESC) AS rn
+        FROM nyc_rent_ledger
+        WHERE ${clauses.join(' AND ')}
+      )
+      WHERE rn = 1
+      ORDER BY last_seen_at DESC
       LIMIT {limit:UInt32}
     `,
     query_params: params,

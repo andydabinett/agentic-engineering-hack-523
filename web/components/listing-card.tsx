@@ -63,13 +63,18 @@ export function ListingCard({ listing, index = 0, fresh = false }: ListingCardPr
           <div className="absolute right-3 top-3">
             <MatchBadge score={listing.matchScore} tone={matchTone} />
           </div>
-          {listing.noBrokerFee && (
-            <div className="absolute left-3 top-3">
+          <div className="absolute left-3 top-3 flex flex-col gap-1.5">
+            {fresh && (
+              <Badge className="border-0 bg-signal-green text-white shadow-sm">
+                New
+              </Badge>
+            )}
+            {listing.noBrokerFee && (
               <Badge variant="outline" className="bg-canvas/90 backdrop-blur-sm">
                 No fee
               </Badge>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {/* Body */}

@@ -41,6 +41,7 @@ export function ChatPanel({ variant = "page" }: ChatPanelProps) {
 
   const { messages, sendMessage, status } = useChat({
     messages: [SEED_MESSAGE],
+    // @ts-ignore
     body: { criteria },
     onData: (part) => {
       // Custom data parts: data-update-criteria / data-ready-to-search
@@ -62,8 +63,14 @@ export function ChatPanel({ variant = "page" }: ChatPanelProps) {
       } else if (toolCall.toolName === "ready_to_search") {
         markReadyToSearch();
       } else if (toolCall.toolName === "scrape_listings") {
+        const prev = useAppStore.getState().listings;
         pollUntilScrapeDone((listings, stats) => {
-          if (listings.length) setListings(listings);
+          const newIds = listings
+            .filter((l) => !prev.some((p) => p.id === l.id))
+            .map((l) => l.id);
+          if (listings.length) {
+            useAppStore.getState().mergeLiveListings(listings, newIds);
+          }
           if (stats) {
             setStatusCounts({
               listingsMonitored: stats.listingsMonitored,

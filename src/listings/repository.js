@@ -1,6 +1,8 @@
 import fs from 'fs';
 import { DatabaseSync } from 'node:sqlite';
 import { DEFAULT_DB, DATA_DIR } from '../config/env.js';
+import { dedupeListingRows, normalizeListingRecord } from './dedupe.js';
+import { listingDedupeKey, normalizeListingUrl } from './normalizeUrl.js';
 
 function utcNow() {
   return new Date().toISOString();
@@ -50,6 +52,7 @@ const CONTACT_COLUMNS = [
   ['agent_email', 'TEXT'],
   ['agent_phone', 'TEXT'],
   ['photos_json', 'TEXT'],
+  ['dedupe_key', 'TEXT'],
 ];
 
 function migrateSchema(db) {
@@ -70,34 +73,78 @@ export class ListingRepository {
     this.db.exec(SCHEMA);
     migrateSchema(this.db);
     this.db.exec('CREATE INDEX IF NOT EXISTS idx_listings_phone ON listings(agent_phone)');
+    this.consolidateDuplicateListings();
+    this.db.exec(
+      'CREATE UNIQUE INDEX IF NOT EXISTS idx_listings_dedupe_key ON listings(dedupe_key)',
+    );
   }
 
   close() {
     this.db.close();
   }
 
+  consolidateDuplicateListings() {
+    const rows = this.db.prepare('SELECT * FROM listings').all();
+    if (!rows.length) return 0;
+
+    const grouped = new Map();
+    for (const row of rows) {
+      const key =
+        row.dedupe_key ||
+        listingDedupeKey(row.url || row.listing_link, row.source);
+      if (!key) continue;
+      if (!grouped.has(key)) grouped.set(key, []);
+      grouped.get(key).push(row);
+    }
+
+    let removed = 0;
+    const updateKey = this.db.prepare(
+      'UPDATE listings SET dedupe_key = ?, url = ?, listing_link = ? WHERE id = ?',
+    );
+    const deleteId = this.db.prepare('DELETE FROM listings WHERE id = ?');
+
+    for (const [, group] of grouped) {
+      group.sort((a, b) =>
+        String(b.last_seen_at || '').localeCompare(String(a.last_seen_at || '')),
+      );
+      const keep = group[0];
+      const url = normalizeListingUrl(keep.url || keep.listing_link);
+      const link = normalizeListingUrl(keep.listing_link || keep.url);
+      const dedupeKey = listingDedupeKey(url || link, keep.source);
+      updateKey.run(dedupeKey, url, link, keep.id);
+
+      for (const dup of group.slice(1)) {
+        deleteId.run(dup.id);
+        removed += 1;
+      }
+    }
+
+    return removed;
+  }
+
   upsertListing(record, { rawSearch } = {}) {
     const now = utcNow();
     const rawJson = rawSearch ? JSON.stringify(rawSearch) : null;
-    const listingLink = record.listingLink || record.url;
+    const normalized = normalizeListingRecord(record);
     const photosJson =
-      record.photos?.length > 0 ? JSON.stringify(record.photos) : null;
+      normalized.photos?.length > 0 ? JSON.stringify(normalized.photos) : null;
 
     this.db
       .prepare(
         `
       INSERT INTO listings (
-        source, borough, url, listing_link, title, snippet,
+        source, borough, url, listing_link, dedupe_key, title, snippet,
         rent_hint, bedrooms, bathrooms,
         agent_name, agency_name, agent_email, agent_phone, photos_json,
         status, first_seen_at, last_seen_at, verification_note, raw_search_json
       ) VALUES (
-        ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, ?, ?,
         ?, ?, ?,
         ?, ?, ?, ?, ?,
         ?, ?, ?, ?, ?
       )
-      ON CONFLICT(url) DO UPDATE SET
+      ON CONFLICT(dedupe_key) DO UPDATE SET
+        url = excluded.url,
         listing_link = excluded.listing_link,
         title = excluded.title,
         snippet = excluded.snippet,
@@ -118,28 +165,32 @@ export class ListingRepository {
     `,
       )
       .run(
-        record.source,
-        record.borough,
-        record.url,
-        listingLink,
-        record.title,
-        record.snippet,
-        record.rentHint ?? null,
-        record.bedrooms ?? null,
-        record.bathrooms ?? null,
-        record.agentName ?? null,
-        record.agencyName ?? null,
-        record.agentEmail ?? null,
-        record.agentPhone ?? null,
+        normalized.source,
+        normalized.borough,
+        normalized.url,
+        normalized.listingLink,
+        normalized.dedupeKey,
+        normalized.title,
+        normalized.snippet,
+        normalized.rentHint ?? null,
+        normalized.bedrooms ?? null,
+        normalized.bathrooms ?? null,
+        normalized.agentName ?? null,
+        normalized.agencyName ?? null,
+        normalized.agentEmail ?? null,
+        normalized.agentPhone ?? null,
         photosJson,
-        record.status || 'active',
+        normalized.status || 'active',
         now,
         now,
-        record.verificationNote ?? null,
+        normalized.verificationNote ?? null,
         rawJson,
       );
 
-    return this.db.prepare('SELECT id FROM listings WHERE url = ?').get(record.url).id;
+    const row = this.db
+      .prepare('SELECT id FROM listings WHERE dedupe_key = ?')
+      .get(normalized.dedupeKey);
+    return row.id;
   }
 
   updateVerification(listingId, { status, note }) {
@@ -158,7 +209,7 @@ export class ListingRepository {
     return this.db.prepare('SELECT * FROM listings WHERE id = ?').get(id);
   }
 
-  listAll({ borough, source, limit = 200, statuses } = {}) {
+  listAll({ borough, source, limit = 200, statuses, since } = {}) {
     const clauses = [];
     const params = [];
     if (borough) {
@@ -169,17 +220,22 @@ export class ListingRepository {
       clauses.push('source = ?');
       params.push(source);
     }
+    if (since) {
+      clauses.push('first_seen_at > ?');
+      params.push(since);
+    }
     if (statuses?.length) {
       clauses.push(`status IN (${statuses.map(() => '?').join(',')})`);
       params.push(...statuses);
     }
     const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
     const limitSql = limit ? `LIMIT ${Number(limit)}` : '';
-    return this.db
+    const rows = this.db
       .prepare(
         `SELECT * FROM listings ${where} ORDER BY last_seen_at DESC ${limitSql}`,
       )
       .all(...params);
+    return dedupeListingRows(rows);
   }
 
   listForVerification({ borough, source, statuses, limit } = {}) {

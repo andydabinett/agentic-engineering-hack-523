@@ -1,6 +1,8 @@
 "use client";
 
+import { useMemo } from "react";
 import { Sparkles } from "lucide-react";
+import { listingMatchesCriteria } from "@/lib/matchesCriteria";
 import { useAppStore } from "@/lib/store";
 import { DashboardStatusBar } from "@/components/dashboard-status-bar";
 import { ActivityFeed } from "@/components/activity-feed";
@@ -9,7 +11,20 @@ import { useDemoMode } from "@/components/use-demo-mode";
 
 export default function DashboardPage() {
   const listings = useAppStore((s) => s.listings);
-  const { runDemo, freshListingIds } = useDemoMode();
+  const criteria = useAppStore((s) => s.criteria);
+  const liveFreshIds = useAppStore((s) => s.freshListingIds);
+  const { runDemo, freshListingIds: demoFreshIds } = useDemoMode();
+
+  const visibleListings = useMemo(
+    () => listings.filter((l) => listingMatchesCriteria(l, criteria)),
+    [listings, criteria],
+  );
+
+  const freshSet = useMemo(() => {
+    const s = new Set(liveFreshIds);
+    demoFreshIds.forEach((id) => s.add(id));
+    return s;
+  }, [liveFreshIds, demoFreshIds]);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -27,7 +42,8 @@ export default function DashboardPage() {
                 Today&apos;s feed
               </h1>
               <p className="mt-1 text-[13.5px] text-ink-muted">
-                Sorted by recency. Click any card to open the deal sheet.
+                Live updates every ~{Math.round(Number(process.env.NEXT_PUBLIC_LISTINGS_POLL_MS || 20000) / 1000)}s
+                when the crawler finds new matches.
               </p>
             </div>
             <button
@@ -44,15 +60,21 @@ export default function DashboardPage() {
           </div>
 
           <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
-            {listings.map((l, i) => (
+            {visibleListings.map((l, i) => (
               <ListingCard
                 key={l.id}
                 listing={l}
                 index={i}
-                fresh={freshListingIds.has(l.id)}
+                fresh={freshSet.has(l.id)}
               />
             ))}
           </ul>
+          {visibleListings.length === 0 && (
+            <p className="rounded-xl border border-dashed border-rule bg-surface px-6 py-12 text-center text-[14px] text-ink-muted">
+              No listings yet — set criteria in chat and start a scrape, or wait for the
+              background crawler.
+            </p>
+          )}
         </section>
 
         {/* Activity sidebar */}

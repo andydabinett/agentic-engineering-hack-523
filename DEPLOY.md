@@ -45,7 +45,7 @@ Optional (already set in Docker image):
 |----------|--------|
 | `CLOUD_INGEST` | `1` (Nimble-only, no Playwright) |
 | `CRAWLER_ENABLED` | `1` (default in Dockerfile — background ingest) |
-| `CRAWLER_INGEST_INTERVAL` | `30m` (how often to pull new listings) |
+| `CRAWLER_INGEST_INTERVAL` | `2m` (how often to pull new listings) |
 | `CRAWLER_VERIFY_INTERVAL` | `1h` (re-check stale URLs) |
 | `CRAWLER_MAX_RESULTS` | `5` per borough/source per cycle |
 | `NODE_ENV` | `production` |
