@@ -1,0 +1,24 @@
+{
+  "name": "javier-nyc-rent-concierge",
+  "version": "0.1.0",
+  "description": "NYC rent concierge — Nimble ingest, ClickHouse analytics, listing verification",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test:clickhouse": "node scripts/test-clickhouse.js",
+    "test:zillow": "node scripts/test-zillow-scrape.js",
+    "ingest": "node scripts/ingest-boroughs.js",
+    "ingest:brooklyn": "node scripts/ingest-boroughs.js --boroughs brooklyn --max-results 3 --depth deep",
+    "contacts": "node scripts/list-contacts.js",
+    "test:craigslist-phone": "node scripts/test-craigslist-phone.js",
+    "playwright:install": "playwright install chromium",
+    "verify": "node scripts/verify-listings.js"
+  },
+  "dependencies": {
+    "@clickhouse/client": "^1.10.1",
+    "dotenv": "^16.4.7",
+    "playwright": "^1.51.0"
+  }
+}
