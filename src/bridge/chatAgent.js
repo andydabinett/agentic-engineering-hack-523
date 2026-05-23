@@ -16,6 +16,9 @@ import { ROOT } from "../config/env.js";
 import { startAgentScrape } from "../crawler/agentScrape.js";
 import {
   buildListingSummary,
+  canStartCorrespondence,
+  correspondenceFakeDemoEnabled,
+  demoListerPhone,
   startCorrespondence,
   twilioConfiguredForCorrespondence,
 } from "./correspondenceClient.js";
@@ -123,12 +126,12 @@ const startCorrespondenceTool = defineTool({
     listerPhone: Type.Optional(Type.String()),
   }),
   async execute(params) {
-    if (!twilioConfiguredForCorrespondence()) {
+    if (!canStartCorrespondence()) {
       return {
         content: [
           {
             type: "text",
-            text: "Twilio is not configured — cannot send SMS yet.",
+            text: "Correspondence is not configured — set TWILIO_* or CORRESPONDENCE_FAKE_DEMO=1.",
           },
         ],
         details: { ok: false },
@@ -156,7 +159,10 @@ const startCorrespondenceTool = defineTool({
       };
     }
 
-    const phone = params.listerPhone || listing.brokerPhone;
+    const phone =
+      params.listerPhone ||
+      listing.brokerPhone ||
+      (correspondenceFakeDemoEnabled() ? demoListerPhone() : "");
     if (!phone?.trim()) {
       return {
         content: [
@@ -179,6 +185,7 @@ const startCorrespondenceTool = defineTool({
 
       const details = {
         ok: true,
+        fakeDemo: correspondenceFakeDemoEnabled(),
         threadId: view.threadId,
         listingId: view.listingId,
         status: view.status,

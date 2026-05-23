@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { isFakeCorrespondenceDemo } from "@/lib/correspondenceConfig";
 import {
   handleCorrespondenceStarted,
   startCorrespondenceForListing,
@@ -24,8 +25,17 @@ export function ReachOutButton({
   size = "sm",
 }: ReachOutButtonProps) {
   const [loading, setLoading] = useState(false);
+  const [fakeDemo, setFakeDemo] = useState(false);
 
-  if (isDemoMode() || listing.status !== "matched" || !listing.brokerPhone?.trim()) {
+  useEffect(() => {
+    void isFakeCorrespondenceDemo().then(setFakeDemo);
+  }, []);
+
+  if (isDemoMode() || listing.status !== "matched") {
+    return null;
+  }
+
+  if (!fakeDemo && !listing.brokerPhone?.trim()) {
     return null;
   }
 
@@ -40,6 +50,7 @@ export function ReachOutButton({
       handleCorrespondenceStarted(
         {
           ok: true,
+          fakeDemo: view.fakeDemo ?? fakeDemo,
           threadId: view.threadId,
           listingId: view.listingId,
           status: view.status,
@@ -68,7 +79,7 @@ export function ReachOutButton({
       onClick={onClick}
     >
       <MessageSquare className="h-3.5 w-3.5" />
-      {loading ? "Texting…" : "Reach out"}
+      {loading ? "Texting…" : fakeDemo ? "Demo reach out" : "Reach out"}
     </Button>
   );
 }

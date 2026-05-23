@@ -16,12 +16,14 @@ export async function POST(request: Request) {
     const {
       startCorrespondence,
       buildListingSummary,
-      twilioConfiguredForCorrespondence,
+      canStartCorrespondence,
+      correspondenceFakeDemoEnabled,
+      demoListerPhone,
     } = await loadCorrespondenceBridge();
 
-    if (!twilioConfiguredForCorrespondence()) {
+    if (!canStartCorrespondence()) {
       return NextResponse.json(
-        { error: "Twilio is not configured (TWILIO_* in .env)" },
+        { error: "Set TWILIO_* or CORRESPONDENCE_FAKE_DEMO=1" },
         { status: 503 },
       );
     }
@@ -38,7 +40,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Listing not found" }, { status: 404 });
     }
 
-    const listerPhone = body.listerPhone || listing.brokerPhone;
+    const listerPhone =
+      body.listerPhone ||
+      listing.brokerPhone ||
+      (correspondenceFakeDemoEnabled() ? demoListerPhone() : "");
+
     if (!listerPhone?.trim()) {
       return NextResponse.json(
         { error: "No broker phone on file for this listing" },
@@ -54,7 +60,10 @@ export async function POST(request: Request) {
       listingSummary: body.listingSummary || buildListingSummary(listing),
     });
 
-    return NextResponse.json(view, { status: 201 });
+    return NextResponse.json(
+      { ...view, fakeDemo: correspondenceFakeDemoEnabled() },
+      { status: 201 },
+    );
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: message }, { status: 500 });

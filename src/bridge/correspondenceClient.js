@@ -17,6 +17,18 @@ export function twilioConfiguredForCorrespondence() {
   );
 }
 
+export function correspondenceFakeDemoEnabled() {
+  return process.env.CORRESPONDENCE_FAKE_DEMO === "1";
+}
+
+export function demoListerPhone() {
+  return process.env.DEMO_LISTER_PHONE || "+18777804236";
+}
+
+export function canStartCorrespondence() {
+  return twilioConfiguredForCorrespondence() || correspondenceFakeDemoEnabled();
+}
+
 /**
  * @param {{
  *   listingId: string;
@@ -99,4 +111,34 @@ export function buildListingSummary(listing) {
     : "";
   const parts = [listing.address, listing.neighborhood, beds, price].filter(Boolean);
   return parts.join(" · ");
+}
+
+/**
+ * @param {string} threadId
+ * @param {string} body
+ */
+export async function simulateCorrespondenceReply(threadId, body) {
+  const base = correspondenceApiUrl();
+  const response = await fetch(
+    `${base}/correspondence/${encodeURIComponent(threadId)}/simulate-reply`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body }),
+    },
+  );
+
+  const text = await response.text();
+  let payload;
+  try {
+    payload = text ? JSON.parse(text) : {};
+  } catch {
+    payload = { error: text || `HTTP ${response.status}` };
+  }
+
+  if (!response.ok) {
+    throw new Error(payload.error || `Simulate reply failed (${response.status})`);
+  }
+
+  return payload;
 }

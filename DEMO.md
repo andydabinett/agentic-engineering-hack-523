@@ -74,7 +74,43 @@ completed (or failed)
 
 ---
 
-## Demo without ngrok
+## Demo without ngrok (fake broker replies — recommended for UI demo)
+
+Set in `.env`:
+
+```bash
+CORRESPONDENCE_FAKE_DEMO=1
+CORRESPONDENCE_DEV=1
+```
+
+**Terminal 1** — correspondence server (FakeSms when Twilio unset):
+
+```bash
+npm run server:fake
+```
+
+**Terminal 2** — dashboard:
+
+```bash
+npm run web:dev
+```
+
+Then either:
+
+- Click **Demo reach out** on a matched listing, or
+- In chat: *"Text the broker on db-24"*
+
+The UI **Messages** thread fills automatically with scripted broker replies (no Virtual Phone, no ngrok).
+
+CLI-only script:
+
+```bash
+npm run demo:fake-correspondence -- demo-listing-1
+```
+
+---
+
+## Demo without ngrok (manual simulate-reply)
 
 Useful for backend development when you do not need real inbound SMS.
 

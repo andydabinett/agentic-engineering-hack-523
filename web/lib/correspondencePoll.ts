@@ -1,4 +1,6 @@
 import { toast } from "sonner";
+import { runFakeCorrespondenceScript } from "./fakeCorrespondenceDemo";
+import { isFakeCorrespondenceDemo } from "./correspondenceConfig";
 import {
   correspondenceToListingStatus,
   correspondenceToViewing,
@@ -91,7 +93,7 @@ export async function startCorrespondenceForListing(listingId: string) {
   if (!res.ok) {
     throw new Error(payload.error || `Start correspondence failed (${res.status})`);
   }
-  return payload as CorrespondenceThreadView;
+  return payload as CorrespondenceThreadView & { fakeDemo?: boolean };
 }
 
 export function pollCorrespondenceThread(
@@ -156,6 +158,7 @@ export function pollCorrespondenceThread(
 export function handleCorrespondenceStarted(
   data: {
     ok?: boolean;
+    fakeDemo?: boolean;
     threadId?: string;
     listingId?: string;
     address?: string;
@@ -184,9 +187,21 @@ export function handleCorrespondenceStarted(
   useAppStore.getState().bumpStatusCount("brokersTexted", 1);
   useAppStore.getState().setChatNotification(true);
 
-  toast.message("Texting broker", {
+  toast.message(data.fakeDemo ? "Demo outreach started" : "Texting broker", {
     description: data.address ?? listing?.address,
   });
 
   pollCorrespondenceThread(data.threadId, listing);
+
+  void maybeRunFakeScript(data.fakeDemo, data.threadId, listing);
+}
+
+async function maybeRunFakeScript(
+  fakeDemo: boolean | undefined,
+  threadId: string,
+  listing?: Listing,
+) {
+  const enabled = fakeDemo ?? (await isFakeCorrespondenceDemo());
+  if (!enabled) return;
+  await runFakeCorrespondenceScript(threadId, listing);
 }

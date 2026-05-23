@@ -26,7 +26,9 @@ export function loadConfig(): Config {
   return {
     port: Number(env("PORT", "3001")),
     publicBaseUrl: env("PUBLIC_BASE_URL", "http://localhost:3001")!,
-    correspondenceDev: env("CORRESPONDENCE_DEV", "0") === "1",
+    correspondenceDev:
+      env("CORRESPONDENCE_DEV", "0") === "1" ||
+      env("CORRESPONDENCE_FAKE_DEMO", "0") === "1",
     openRouterApiKey: env("OPENROUTER_API_KEY"),
     twilioAccountSid: env("TWILIO_ACCOUNT_SID"),
     twilioAuthToken: env("TWILIO_AUTH_TOKEN"),

@@ -15,6 +15,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "demo:correspondence": "npx tsx scripts/demo-correspondence.ts",
+    "demo:fake-correspondence": "npx tsx scripts/demo-fake-correspondence.ts",
+    "server:fake": "CORRESPONDENCE_FAKE_DEMO=1 CORRESPONDENCE_DEV=1 npx tsx src/index.ts",
     "sync:twilio-webhook": "npx tsx scripts/sync-twilio-webhook.ts",
     "dev:correspondence": "bash scripts/dev-correspondence.sh",
     "init:clickhouse": "npx tsx scripts/init_clickhouse.ts",
